@@ -121,7 +121,7 @@ export const en = {
       free: {
         name: "Free",
         for: "For trying it out",
-        f1: "3 audits / month",
+        f1: "Fair-use audits (early access)",
         f2: "Core checks (secrets, OSV, hygiene)",
         f3: "Score + fixes",
         f4: "No account, no card",
@@ -232,6 +232,7 @@ export const en = {
     p2: "Your optional GitHub token is sent with the audit request over HTTPS and used for that single request; it is not logged or stored. To be safe, prefer a fine-grained token with read-only access.",
     p3: "Standard hosting logs (IP address, HTTP status) may be processed for security and rate limiting by the hosting provider (see their policy) for a limited time.",
     p4: "For any data question, contact us via the app footer address.",
+    contact: "Contact: {email}",
     note: "Template provided with GuardVibe — have it reviewed by a lawyer for full compliance in your jurisdiction.",
   },
 } as const;

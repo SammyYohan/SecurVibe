@@ -99,7 +99,7 @@ export const fr: Partial<Record<FlatKey, string>> = {
   "pricing.currencyNote": "Montants affichés en devise locale ; le paiement est traité en EUR ou USD par Stripe.",
   "pricing.plans.free.name": "Gratuit",
   "pricing.plans.free.for": "Pour essayer",
-  "pricing.plans.free.f1": "3 audits / mois",
+  "pricing.plans.free.f1": "Audits en usage raisonnable (accès anticipé)",
   "pricing.plans.free.f2": "Contrôles de base (secrets, OSV, hygiène)",
   "pricing.plans.free.f3": "Score + correctifs",
   "pricing.plans.free.f4": "Sans compte, sans carte",

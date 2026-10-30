@@ -9,6 +9,8 @@ export type LegalPageProps = {
   params: Promise<{ locale: string }>;
 };
 
+const CONTACT_EMAIL = process.env.CONTACT_EMAIL?.trim() || undefined;
+
 export default async function LegalPage({ params }: LegalPageProps) {
   const { locale: candidate } = await params;
   const locale: Locale = isLocale(candidate) ? candidate : "en";
@@ -61,6 +63,12 @@ export default async function LegalPage({ params }: LegalPageProps) {
             ))}
           </ul>
         </section>
+
+        {CONTACT_EMAIL !== undefined ? (
+          <p className="mt-4 text-sm font-medium text-slate-200">
+            {t("legal.contact", { email: CONTACT_EMAIL })}
+          </p>
+        ) : null}
 
         <p className="mt-8 rounded-lg border border-amber-900/40 bg-amber-950/20 p-4 text-xs text-amber-200">
           {t("legal.note")}

@@ -82,7 +82,7 @@ Coûts marginaux quasi nuls (quotas simples : GitHub raw hors API, OSV.dev gratu
 
 | Plan | Prix | Contenu |
 | --- | --- | --- |
-| **Free** | 0 € | 3 audits/mois, contrôles de base, sans carte |
+| **Free** | 0 € | Audits en usage raisonnable (accès anticipé), contrôles de base, sans carte |
 | **Essential** | 9 €/mois (90 €/an) | audits illimités, audit de production, scan 200 fichiers |
 | **Pro** | 24 €/mois | + multi-dépôts client, 500 fichiers, workspace token partagé |
 | **Team** | 79 €/mois | + 5 sièges, revue trimestrielle, facture |
