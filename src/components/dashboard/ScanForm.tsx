@@ -65,12 +65,12 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
     <form
       onSubmit={handleSubmit}
       noValidate
-      className="grid grid-cols-1 items-start gap-4 md:grid-cols-[minmax(0,6fr)_minmax(0,5fr)_minmax(0,5fr)_auto]"
+      className="grid grid-cols-1 items-start gap-5 rounded-2xl border border-line bg-card p-6 shadow-card sm:p-7 md:grid-cols-2"
     >
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <label
           htmlFor="repo-url"
-          className="text-sm font-medium text-slate-300"
+          className="text-sm font-semibold"
         >
           {t("dashboard.repoUrlLabel")}
         </label>
@@ -88,19 +88,19 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
           aria-describedby={
             errors.repoUrl !== null ? "repo-url-error" : undefined
           }
-          className={cn(errors.repoUrl !== null && "border-red-800/80")}
+          className={cn("font-mono text-[13px]", errors.repoUrl !== null && "border-crit")}
         />
         {errors.repoUrl !== null ? (
-          <p id="repo-url-error" className="text-xs text-red-400">
+          <p id="repo-url-error" className="text-sm font-medium text-crit">
             {errors.repoUrl}
           </p>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <label
           htmlFor="production-url"
-          className="text-sm font-medium text-slate-300"
+          className="text-sm font-semibold"
         >
           {t("dashboard.productionUrlLabel")}
         </label>
@@ -118,21 +118,21 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
           aria-describedby={
             errors.productionUrl !== null ? "production-url-error" : undefined
           }
-          className={cn(errors.productionUrl !== null && "border-red-800/80")}
+          className={cn("font-mono text-[13px]", errors.productionUrl !== null && "border-crit")}
         />
         {errors.productionUrl !== null ? (
-          <p id="production-url-error" className="text-xs text-red-400">
+          <p id="production-url-error" className="text-sm font-medium text-crit">
             {errors.productionUrl}
           </p>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <label
           htmlFor="github-token"
-          className="flex items-center gap-1.5 text-sm font-medium text-slate-300"
+          className="flex items-center gap-1.5 text-sm font-semibold"
         >
-          <KeyRound className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+          <KeyRound className="h-3.5 w-3.5 text-faint" aria-hidden="true" />
           {t("dashboard.tokenLabel")}
         </label>
         <Input
@@ -146,13 +146,14 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
           spellCheck={false}
           disabled={isRunning}
           aria-describedby="github-token-hint"
+          className="font-mono text-[13px]"
         />
-        <p id="github-token-hint" className="text-xs text-slate-500">
+        <p id="github-token-hint" className="text-sm leading-relaxed text-mute">
           {t("dashboard.tokenHint")}
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 md:pt-[26px]">
+      <div className="flex flex-wrap items-center gap-3 md:pt-7">
         <Button type="submit" disabled={isRunning}>
           {isRunning ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

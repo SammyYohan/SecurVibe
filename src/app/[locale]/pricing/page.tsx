@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { BadgeCheck, Check, Rocket, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Check } from "lucide-react";
 
 import { LocaleSwitcher } from "@/components/site/LocaleSwitcher";
+import { Logo } from "@/components/site/Logo";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { buttonVariants } from "@/components/ui/button";
 import { type Locale, LOCALE_META, isLocale } from "@/lib/i18n/config";
 import { createTranslator } from "@/lib/i18n";
 import { PLAN_PRICES, checkoutHref } from "@/lib/pricing";
@@ -98,119 +100,104 @@ export default async function PricingPage({ params }: PricingPageProps) {
   const packFeatures: Array<string> = PACK_FEATURE_KEYS.map((key) => t(key));
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 sm:px-8">
       <header className="flex items-center justify-between gap-4 py-5">
-        <Link href={base} className="flex items-center gap-2.5" aria-label={t("meta.siteName")}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/50 bg-emerald-950/50">
-            <ShieldCheck className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-          </span>
-          <span className="text-lg font-semibold tracking-tight">{t("meta.siteName")}</span>
-        </Link>
-        <div className="flex items-center gap-2">
+        <Logo href={base} label={t("meta.siteName")} />
+        <div className="flex items-center gap-3">
           <LocaleSwitcher locale={locale} />
-          <Link
-            href={`${base}/app`}
-            className="inline-flex h-9 items-center rounded-lg bg-emerald-500 px-4 text-sm font-medium text-slate-950 transition-colors hover:bg-emerald-400"
-          >
+          <Link href={`${base}/app`} className={buttonVariants({ size: "sm" })}>
             {t("nav.start")}
           </Link>
         </div>
       </header>
 
-      <main className="flex-1 py-10">
-        <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
+      <main className="flex-1 py-12">
+        <p className="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-accent">
           {t("pricing.kicker")}
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{t("pricing.title")}</h1>
-        <p className="mt-3 max-w-3xl text-base text-slate-300">{t("pricing.subtitle")}</p>
+        <h1 className="mt-3.5 max-w-3xl text-3xl font-extrabold tracking-[-0.03em] sm:text-5xl sm:leading-[1.1]">
+          {t("pricing.title")}
+        </h1>
+        <p className="mt-4 max-w-3xl text-lg leading-relaxed text-mute">{t("pricing.subtitle")}</p>
 
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {cards.map((card) => (
-            <article
-              key={card.id}
-              className={
-                card.id === "pro" || card.id === "essential"
-                  ? "relative flex flex-col rounded-2xl border border-emerald-800/60 bg-slate-900/70 p-6 shadow-lg"
-                  : "flex flex-col rounded-2xl border border-slate-800 bg-slate-900/50 p-6"
-              }
-            >
-              {card.id === "pro" ? (
-                <span className="absolute -top-3 start-4 rounded-full bg-emerald-500 px-2.5 py-0.5 text-[11px] font-semibold text-slate-950">
-                  {t("pricing.yearlyNote")}
-                </span>
-              ) : null}
-              <h2 className="text-lg font-semibold">{card.name}</h2>
-              <p className="mt-1 text-xs text-slate-500">{card.audience}</p>
-              <p className="mt-4 flex items-baseline gap-1 text-3xl font-bold tabular-nums">
-                {formatPrice(card.monthly, meta.currency, meta.tag)}
-                <span className="text-sm font-normal text-slate-500">
-                  {t("pricing.perMonth")}
-                </span>
-              </p>
-              {card.id !== "free" ? (
-                <p className="mt-1 text-xs text-slate-500">
-                  {t("pricing.yearly")} : {formatPrice(card.yearlyTotal, meta.currency, meta.tag)}
-                  {t("pricing.perYear")} · {t("pricing.yearlyNote")}
+        <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {cards.map((card) => {
+            const featured = card.id === "pro" || card.id === "essential";
+            return (
+              <article
+                key={card.id}
+                className={
+                  featured
+                    ? "relative flex flex-col rounded-2xl border-2 border-accent bg-card p-6 shadow-card"
+                    : "flex flex-col rounded-2xl border border-line bg-card p-6 shadow-card"
+                }
+              >
+                {card.id === "pro" ? (
+                  <span className="absolute -top-3 start-5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
+                    {t("pricing.yearlyNote")}
+                  </span>
+                ) : null}
+                <h2 className="text-lg font-extrabold">{card.name}</h2>
+                <p className="mt-1 text-sm text-mute">{card.audience}</p>
+                <p className="mt-5 flex items-baseline gap-1 text-4xl font-extrabold tracking-tight tabular-nums">
+                  {formatPrice(card.monthly, meta.currency, meta.tag)}
+                  <span className="text-sm font-medium text-mute">{t("pricing.perMonth")}</span>
                 </p>
-              ) : null}
+                {card.id !== "free" ? (
+                  <p className="mt-1 text-xs text-mute">
+                    {t("pricing.yearly")} : {formatPrice(card.yearlyTotal, meta.currency, meta.tag)}
+                    {t("pricing.perYear")} · {t("pricing.yearlyNote")}
+                  </p>
+                ) : null}
 
-              <ul className="mt-5 flex-1 space-y-2.5 text-sm">
-                {card.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-slate-300">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+                <ul className="mt-6 flex-1 space-y-3 text-sm">
+                  {card.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2.5">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
 
-              {card.checkout === null ? (
-                <Link
-                  href={`${base}/app`}
-                  className={
-                    card.id === "free"
-                      ? "mt-6 inline-flex h-10 items-center justify-center rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400"
-                      : "mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-800/60 px-4 text-sm font-medium text-emerald-300 transition-colors hover:bg-emerald-950/40"
-                  }
-                >
-                  <Rocket className="h-4 w-4" aria-hidden="true" />
-                  {card.id === "free" ? t("pricing.ctaFree") : t("pricing.ctaBeta")}
-                </Link>
-              ) : (
-                <a
-                  href={card.checkout}
-                  className="mt-6 inline-flex h-10 items-center justify-center rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400"
-                >
-                  {t("pricing.ctaCheckout")}
-                </a>
-              )}
-            </article>
-          ))}
+                {card.checkout === null ? (
+                  <Link
+                    href={`${base}/app`}
+                    className={`${buttonVariants({ variant: card.id === "free" ? "default" : "outline" })} mt-7`}
+                  >
+                    {card.id === "free" ? t("pricing.ctaFree") : t("pricing.ctaBeta")}
+                  </Link>
+                ) : (
+                  <a href={card.checkout} className={`${buttonVariants()} mt-7`}>
+                    {t("pricing.ctaCheckout")}
+                  </a>
+                )}
+              </article>
+            );
+          })}
         </div>
 
         {/* Pack à l'unité */}
-        <aside className="mt-6 flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <aside className="mt-6 flex flex-col gap-4 rounded-2xl bg-tint p-7 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-base font-semibold">{t("pricing.plans.pack.name")}</h2>
-            <p className="text-xs text-emerald-300">{t("pricing.plans.pack.label")}</p>
-            <ul className="mt-3 space-y-1.5 text-sm text-slate-300">
+            <h2 className="text-lg font-extrabold">{t("pricing.plans.pack.name")}</h2>
+            <p className="text-sm font-semibold text-accent">{t("pricing.plans.pack.label")}</p>
+            <ul className="mt-4 space-y-2 text-sm">
               {packFeatures.map((feature) => (
-                <li key={feature} className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+                <li key={feature} className="flex items-start gap-2.5">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
                   {feature}
                 </li>
               ))}
             </ul>
           </div>
-          <div className="text-end">
-            <p className="text-3xl font-bold tabular-nums">
-              {formatPrice(PLAN_PRICES.pack.monthly, meta.currency, meta.tag)}
-            </p>
-          </div>
+          <p className="text-4xl font-extrabold tracking-tight tabular-nums sm:text-end">
+            {formatPrice(PLAN_PRICES.pack.monthly, meta.currency, meta.tag)}
+          </p>
         </aside>
 
-        <div className="mt-8 space-y-2 rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-xs text-slate-400">
-          <p className="flex items-start gap-2">
-            <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+        <div className="mt-8 space-y-2 rounded-2xl border border-line bg-card p-5 text-sm text-mute">
+          <p className="flex items-start gap-2.5 font-medium text-ink">
+            <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
             {t("pricing.guarantee")}
           </p>
           <p>{t("pricing.betaNote")}</p>

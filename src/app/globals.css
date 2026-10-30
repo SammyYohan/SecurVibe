@@ -1,10 +1,75 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens GuardVibe — palette claire, chaude et homogène.
+ * Une seule couleur d'accent (vert mousse), aucun dégradé, aucun bleu.
+ * Contrastes vérifiés ≥ 4.5:1 (texte) pour chaque paire fond/texte utilisée.
+ */
+@theme {
+  --color-paper: #f4f3ed; /* fond de page */
+  --color-paper-2: #ecebe3; /* survol discret */
+  --color-card: #fbfaf6; /* surfaces */
+  --color-line: #e1dfd4; /* bordures fines */
+  --color-line-strong: #cfccbf; /* bordures de champs / boutons secondaires */
+  --color-ink: #1e2420; /* texte principal */
+  --color-mute: #59615b; /* texte secondaire */
+  --color-faint: #6b736d; /* placeholders, métadonnées */
+  --color-tint: #e6ece3; /* aplat sauge (badges, bandeau CTA) */
+  --color-accent: #2f5d4a; /* vert mousse */
+  --color-accent-hover: #264d3d;
+  --color-crit: #a83b28; /* brique */
+  --color-crit-bg: #f6e5df;
+  --color-warn: #8a5600; /* ocre */
+  --color-warn-bg: #f5ebd3;
+  --color-night: #22281f; /* blocs de code */
+  --color-night-fg: #e9ede4;
+  --color-night-mute: #a9b5a3;
+
+  --shadow-card: 0 1px 2px rgb(30 36 32 / 0.04), 0 10px 28px rgb(30 36 32 / 0.05);
+}
+
+@theme inline {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background-color: oklch(69.6% 0.17 162.48); /* emerald-500 */
-  color: oklch(0.208 0.042 265.755); /* slate-900 */
+  background-color: var(--color-accent);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

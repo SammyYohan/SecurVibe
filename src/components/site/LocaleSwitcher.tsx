@@ -17,20 +17,20 @@ export function LocaleSwitcher({ locale }: { locale: Locale }) {
 
   return (
     <label className="relative inline-flex items-center">
-      <Globe className="pointer-events-none absolute left-2.5 h-4 w-4 text-slate-500" aria-hidden="true" />
+      <Globe className="pointer-events-none absolute start-3 h-4 w-4 text-mute" aria-hidden="true" />
       <span className="sr-only">{LOCALE_META[locale].name}</span>
       <select
         value={locale}
         onChange={(event) => handleChange(event.target.value)}
-        className="h-9 appearance-none rounded-lg border border-slate-800 bg-slate-900 pl-8 pr-8 text-sm text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        className="h-10 appearance-none rounded-xl border border-line-strong bg-card ps-9 pe-9 text-sm font-medium text-ink transition-colors hover:bg-paper-2"
       >
         {LOCALES.map((code) => (
-          <option key={code} value={code} className="bg-slate-900">
+          <option key={code} value={code}>
             {LOCALE_META[code].name}
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 h-4 w-4 text-slate-500" aria-hidden="true" />
+      <ChevronDown className="pointer-events-none absolute end-3 h-4 w-4 text-mute" aria-hidden="true" />
     </label>
   );
 }

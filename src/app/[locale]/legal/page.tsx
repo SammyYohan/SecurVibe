@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
 
+import { Logo } from "@/components/site/Logo";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { type Locale, LOCALE_META, isLocale } from "@/lib/i18n/config";
 import { createTranslator } from "@/lib/i18n";
@@ -21,32 +21,27 @@ export default async function LegalPage({ params }: LegalPageProps) {
   const privacy: Array<string> = [t("legal.p1"), t("legal.p2"), t("legal.p3"), t("legal.p4")];
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-5 sm:px-8">
       <header className="flex items-center justify-between gap-4 py-5">
-        <Link href={base} className="flex items-center gap-2.5" aria-label={t("meta.siteName")}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-900/50 bg-emerald-950/50">
-            <ShieldCheck className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-          </span>
-          <span className="text-lg font-semibold tracking-tight">{t("meta.siteName")}</span>
-        </Link>
-        <Link href={base} className="text-sm text-slate-400 transition-colors hover:text-emerald-300">
+        <Logo href={base} label={t("meta.siteName")} />
+        <Link href={base} className="text-sm font-medium text-mute transition-colors hover:text-ink">
           {t("nav.app")}
         </Link>
       </header>
 
-      <main className="flex-1 py-10">
-        <h1 className="text-3xl font-bold tracking-tight">{t("legal.title")}</h1>
-        <p className="mt-2 text-xs text-slate-500">
+      <main className="flex-1 py-12">
+        <h1 className="text-4xl font-extrabold tracking-[-0.03em]">{t("legal.title")}</h1>
+        <p className="mt-3 text-sm text-mute">
           {t("legal.updated", {
             date: new Date().toLocaleDateString(LOCALE_META[locale].tag),
           })}
         </p>
 
-        <section className="mt-8" aria-labelledby="terms-title">
-          <h2 id="terms-title" className="text-xl font-semibold text-emerald-300">
+        <section className="mt-10" aria-labelledby="terms-title">
+          <h2 id="terms-title" className="text-xl font-extrabold tracking-tight">
             {t("legal.termsTitle")}
           </h2>
-          <ol className="mt-4 list-decimal space-y-3 ps-5 text-sm leading-relaxed text-slate-300">
+          <ol className="mt-4 list-decimal space-y-3 ps-5 leading-relaxed text-mute marker:font-semibold marker:text-accent">
             {terms.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -54,10 +49,10 @@ export default async function LegalPage({ params }: LegalPageProps) {
         </section>
 
         <section className="mt-10" aria-labelledby="privacy-title">
-          <h2 id="privacy-title" className="text-xl font-semibold text-emerald-300">
+          <h2 id="privacy-title" className="text-xl font-extrabold tracking-tight">
             {t("legal.privacyTitle")}
           </h2>
-          <ul className="mt-4 list-disc space-y-3 ps-5 text-sm leading-relaxed text-slate-300">
+          <ul className="mt-4 list-disc space-y-3 ps-5 leading-relaxed text-mute marker:font-semibold marker:text-accent">
             {privacy.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -65,12 +60,12 @@ export default async function LegalPage({ params }: LegalPageProps) {
         </section>
 
         {CONTACT_EMAIL !== undefined ? (
-          <p className="mt-4 text-sm font-medium text-slate-200">
+          <p className="mt-6 font-semibold">
             {t("legal.contact", { email: CONTACT_EMAIL })}
           </p>
         ) : null}
 
-        <p className="mt-8 rounded-lg border border-amber-900/40 bg-amber-950/20 p-4 text-xs text-amber-200">
+        <p className="mt-10 rounded-2xl bg-warn-bg p-5 text-sm leading-relaxed text-warn">
           {t("legal.note")}
         </p>
       </main>

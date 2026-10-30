@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, ShieldAlert } from "lucide-react";
+import { Check, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -15,10 +15,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 import type { Finding, Severity } from "@/types";
 
 export type SecurityReportProps = {
   findings: Finding[];
+};
+
+const SEVERITY_PANEL: Record<Severity, string> = {
+  CRITICAL: "bg-crit-bg",
+  WARNING: "bg-warn-bg",
+  OK: "border border-line",
+};
+
+const SEVERITY_ICON_COLOR: Record<Severity, string> = {
+  CRITICAL: "text-crit",
+  WARNING: "text-warn",
+  OK: "text-accent",
 };
 
 const SEVERITY_BADGE_VARIANT: Record<Severity, BadgeVariant> = {
@@ -141,7 +154,7 @@ export function SecurityReport({ findings }: SecurityReportProps) {
 
       <CardContent>
         {critical.length > 0 || warning.length > 0 ? (
-          <div className="mb-3 flex">
+          <div className="mb-5 flex">
             <Button
               type="button"
               variant="outline"
@@ -150,7 +163,7 @@ export function SecurityReport({ findings }: SecurityReportProps) {
               }}
             >
               {copied ? (
-                <Check className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                <Check className="h-4 w-4 text-accent" aria-hidden="true" />
               ) : (
                 <Copy className="h-4 w-4" aria-hidden="true" />
               )}
@@ -160,11 +173,11 @@ export function SecurityReport({ findings }: SecurityReportProps) {
         ) : null}
 
         {findings.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400">
+          <p className="py-10 text-center text-sm text-mute">
             {t("dashboard.emptyReport")}
           </p>
         ) : (
-          <ul className="flex flex-col divide-y divide-slate-800/70">
+          <ul className="flex flex-col gap-3">
             {[...critical, ...warning].map((finding) => (
               <FindingItem
                 key={finding.id}
@@ -176,11 +189,11 @@ export function SecurityReport({ findings }: SecurityReportProps) {
         )}
 
         {ok.length > 0 ? (
-          <div className="mt-6 border-t border-slate-800/70 pt-4">
-            <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-500">
+          <div className="mt-7 border-t border-line pt-5">
+            <p className="mb-3 text-sm font-semibold text-mute">
               {t("dashboard.okSection")}
             </p>
-            <ul className="flex flex-col divide-y divide-slate-800/50 opacity-80">
+            <ul className="flex flex-col gap-2">
               {ok.map((finding) => (
                 <FindingItem
                   key={finding.id}
@@ -197,32 +210,37 @@ export function SecurityReport({ findings }: SecurityReportProps) {
 }
 
 function FindingItem({ finding, label }: { finding: Finding; label: string }) {
+  const Icon = finding.severity === "OK" ? ShieldCheck : ShieldAlert;
   return (
-    <li className="flex flex-col gap-2 py-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={SEVERITY_BADGE_VARIANT[finding.severity]}>
+    <li
+      className={cn(
+        "flex flex-col gap-3 rounded-2xl p-5",
+        SEVERITY_PANEL[finding.severity],
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-2.5">
+        <Badge
+          variant={SEVERITY_BADGE_VARIANT[finding.severity]}
+          className={finding.severity === "OK" ? undefined : "bg-white"}
+        >
           {label}
         </Badge>
-        <code className="rounded bg-slate-950 px-1.5 py-0.5 font-mono text-xs text-slate-400">
+        <code className="font-mono text-[13px] font-semibold text-ink">
           {finding.file}
         </code>
       </div>
 
-      <div className="flex items-start gap-2">
-        <ShieldAlert
-          className={
-            finding.severity === "OK"
-              ? "mt-0.5 h-4 w-4 shrink-0 text-emerald-500"
-              : "mt-0.5 h-4 w-4 shrink-0 text-red-400"
-          }
+      <div className="flex items-start gap-2.5">
+        <Icon
+          className={cn("mt-0.5 h-4 w-4 shrink-0", SEVERITY_ICON_COLOR[finding.severity])}
           aria-hidden="true"
         />
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <p className="font-semibold text-slate-100">{finding.issue}</p>
-          <p className="text-sm leading-relaxed text-slate-400">
+        <div className="flex min-w-0 flex-col gap-2">
+          <p className="font-bold">{finding.issue}</p>
+          <p className="text-sm leading-relaxed text-mute">
             {finding.explanation}
           </p>
-          <code className="mt-1 block overflow-x-auto whitespace-pre rounded-lg border border-slate-800 bg-slate-950 p-3 font-mono text-xs leading-relaxed text-slate-300">
+          <code className="mt-1 block overflow-x-auto whitespace-pre rounded-xl border border-line bg-white p-3.5 font-mono text-xs leading-relaxed text-ink">
             {finding.fix}
           </code>
         </div>

@@ -32,10 +32,14 @@ export type ScanStatusProps = {
 };
 
 const TIER_TEXT_COLOR: Record<ScoreTier, string> = {
-  good: "text-emerald-400",
-  medium: "text-amber-400",
-  bad: "text-red-400",
+  good: "text-accent",
+  medium: "text-warn",
+  bad: "text-crit",
 };
+
+/** Anneau de score : rayon et circonférence du cercle SVG (viewBox 168). */
+const RING_RADIUS = 72;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export function ScanStatus({
   status,
@@ -93,27 +97,27 @@ export function ScanStatus({
       case "idle":
         return (
           <CircleDashed
-            className="h-4 w-4 text-slate-500"
+            className="h-4 w-4 text-faint"
             aria-hidden="true"
           />
         );
       case "running":
         return (
-          <Loader2 className="h-4 w-4 animate-spin text-emerald-400" aria-hidden="true" />
+          <Loader2 className="h-4 w-4 animate-spin text-accent" aria-hidden="true" />
         );
       case "done":
         return (
           <CheckCircle2
-            className="h-4 w-4 text-emerald-400"
+            className="h-4 w-4 text-accent"
             aria-hidden="true"
           />
         );
       case "error":
         return (
-          <XCircle className="h-4 w-4 text-red-400" aria-hidden="true" />
+          <XCircle className="h-4 w-4 text-crit" aria-hidden="true" />
         );
       case "cancelled":
-        return <Ban className="h-4 w-4 text-slate-500" aria-hidden="true" />;
+        return <Ban className="h-4 w-4 text-faint" aria-hidden="true" />;
     }
   }, [status]);
 
@@ -138,64 +142,70 @@ export function ScanStatus({
     return "";
   }, [status, phase, score, errorMessage, t]);
 
-  return (
-    <Card className="relative overflow-hidden">
-      {/* Halo discret derrière le score (dégradé radial léger). */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(40%_70%_at_80%_50%,rgba(16,185,129,0.14),transparent_75%)]"
-      />
+  const ringLength =
+    score === null ? 0 : (RING_CIRCUMFERENCE * Math.min(100, animatedScore)) / 100;
 
-      <CardContent className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <div className="flex items-center gap-2">
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-8 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2.5">
             {statusIcon}
-            <p className="text-sm font-medium text-slate-300">
-              {statusLabel}
-            </p>
-            <Badge variant="neutral" className="ml-auto md:ml-4">
+            <p className="text-base font-bold">{statusLabel}</p>
+            <Badge variant="neutral">
               {phase === "site" ? t("dashboard.phaseSite") : t("dashboard.phaseScan")}
             </Badge>
           </div>
 
           <Progress value={progress} ariaLabel={t("dashboard.progressLabel")} />
 
-          <p className="text-xs tabular-nums text-slate-500">
+          <p className="text-sm tabular-nums text-mute">
             {Math.round(progress)}&nbsp;%&nbsp;/&nbsp;100&nbsp;%
           </p>
         </div>
 
-        <div className="flex flex-col items-start md:items-end">
-          <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        <div className="flex flex-col items-center gap-3">
+          <span className="text-sm font-semibold text-mute">
             {t("dashboard.scoreLabel")}
           </span>
-          <div className="flex items-baseline gap-2">
-            <span
-              className={cn(
-                "text-7xl font-bold tabular-nums tracking-tight sm:text-8xl",
-                tier === null ? "text-slate-100" : TIER_TEXT_COLOR[tier],
-              )}
-            >
-              {score === null ? "--" : animatedScore}
-            </span>
-            {partial && score !== null ? (
-              <span className="text-base text-slate-400">{t("dashboard.partial")}</span>
-            ) : null}
-            {finalScore && score !== null ? (
-              <span className="text-base text-slate-500">/ 100</span>
-            ) : null}
+          <div className="relative h-44 w-44">
+            <svg viewBox="0 0 168 168" className="h-full w-full -rotate-90" aria-hidden="true">
+              <circle cx="84" cy="84" r={RING_RADIUS} fill="none" strokeWidth="12" className="stroke-line" />
+              <circle
+                cx="84"
+                cy="84"
+                r={RING_RADIUS}
+                fill="none"
+                strokeWidth="12"
+                strokeLinecap="round"
+                strokeDasharray={`${ringLength} ${RING_CIRCUMFERENCE}`}
+                className={cn("stroke-current", tier === null ? "text-line" : TIER_TEXT_COLOR[tier])}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span
+                className={cn(
+                  "text-6xl font-extrabold tabular-nums tracking-[-0.04em]",
+                  tier === null ? "text-faint" : TIER_TEXT_COLOR[tier],
+                )}
+              >
+                {score === null ? "--" : animatedScore}
+              </span>
+              {partial && score !== null ? (
+                <span className="text-sm text-mute">{t("dashboard.partial")}</span>
+              ) : null}
+              {finalScore && score !== null ? (
+                <span className="text-sm text-mute">/ 100</span>
+              ) : null}
+            </div>
           </div>
           {trendText !== null ? (
-            <p
-              className={cn(
-                "mt-1 text-xs font-medium",
-                trend === "up" && "text-emerald-400",
-                trend === "down" && "text-red-300",
-                trend === "flat" && "text-slate-400",
-              )}
+            <Badge
+              variant={trend === "down" ? "critical" : trend === "up" ? "success" : "neutral"}
+              className="h-7 px-3"
             >
               {trendText}
-            </p>
+            </Badge>
           ) : null}
         </div>
       </CardContent>

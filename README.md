@@ -28,6 +28,8 @@
 
 ## Stack
 
+> 🎨 Le système de design (palette, typographie, composants) est documenté dans [`DESIGN.md`](./DESIGN.md).
+
 - **Next.js 16** (App Router, RSC), **React 19**, **TypeScript strict**
 - **Tailwind CSS v4**, lucide-react, composants UI maison (shadcn-style)
 - **zod** pour tous les contrats (schémas partagés client/serveur)

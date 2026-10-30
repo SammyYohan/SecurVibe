@@ -1,10 +1,11 @@
 "use client";
 
-import { AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { z } from "zod";
 
+import { Logo } from "@/components/site/Logo";
 import { Button } from "@/components/ui/button";
 import { ScanForm } from "@/components/dashboard/ScanForm";
 import { ScanStatus } from "@/components/dashboard/ScanStatus";
@@ -372,25 +373,11 @@ function DashboardInner() {
   );
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-6">
+    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-5 py-6 sm:px-8">
+      <header className="flex flex-col gap-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href={`/${locale}`}
-            className="flex items-center gap-3"
-            aria-label={t("meta.siteName")}
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-900/50 bg-emerald-950/50">
-              <ShieldCheck
-                className="h-5 w-5 text-emerald-400"
-                aria-hidden="true"
-              />
-            </span>
-            <span className="text-2xl font-semibold tracking-tight text-slate-100">
-              {t("meta.siteName")}
-            </span>
-          </Link>
-          <Badge variant="warning">{t("dashboard.bannerDemo")}</Badge>
+          <Logo href={`/${locale}`} label={t("meta.siteName")} />
+          <Badge variant="success">{t("dashboard.bannerDemo")}</Badge>
         </div>
 
         <ScanForm
@@ -403,13 +390,13 @@ function DashboardInner() {
       {state.errorMessage !== null ? (
         <div
           role="alert"
-          className="flex items-start gap-3 rounded-xl border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-200"
+          className="flex items-start gap-3 rounded-2xl bg-crit-bg px-5 py-4 text-sm text-crit"
         >
           <AlertTriangle
-            className="mt-0.5 h-4 w-4 shrink-0 text-red-400"
+            className="mt-0.5 h-4 w-4 shrink-0"
             aria-hidden="true"
           />
-          <p>{state.errorMessage}</p>
+          <p className="font-medium">{state.errorMessage}</p>
         </div>
       ) : null}
 
@@ -435,24 +422,18 @@ function DashboardInner() {
 
       <section
         aria-label={t("dashboard.findTitle")}
-        className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2"
+        className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
       >
         <SecurityReport findings={state.findings} />
         <SiteAuditPanel steps={state.steps} />
       </section>
 
-      <footer className="mt-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-slate-800/70 pt-6 text-center text-xs leading-relaxed text-slate-500">
+      <footer className="mt-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-line pt-6 text-center text-xs leading-relaxed text-mute">
         <span className="w-full">{t("dashboard.footer")}</span>
-        <Link
-          href={`/${locale}/legal`}
-          className="transition-colors hover:text-emerald-300"
-        >
+        <Link href={`/${locale}/legal`} className="font-medium transition-colors hover:text-ink">
           {t("footer.linksLegal")}
         </Link>
-        <Link
-          href={`/${locale}/pricing`}
-          className="transition-colors hover:text-emerald-300"
-        >
+        <Link href={`/${locale}/pricing`} className="font-medium transition-colors hover:text-ink">
           {t("footer.linksPricing")}
         </Link>
       </footer>

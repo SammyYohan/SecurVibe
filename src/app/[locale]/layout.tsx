@@ -1,10 +1,23 @@
 import type { Metadata } from "next";
+import { JetBrains_Mono, Manrope } from "next/font/google";
 import { notFound } from "next/navigation";
 
 import { LOCALES, LOCALE_META, type Locale, isLocale } from "@/lib/i18n/config";
 import { createTranslator } from "@/lib/i18n";
 
 import "../globals.css";
+
+const manrope = Manrope({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-manrope",
+  display: "swap",
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
 
 export function generateStaticParams(): Array<{ locale: string }> {
   return LOCALES.map((locale) => ({ locale }));
@@ -52,8 +65,14 @@ export default async function LocaleLayout({
   const meta = LOCALE_META[candidate];
 
   return (
-    <html lang={meta.tag} dir={meta.dir} className="h-full">
-      <body className="min-h-full bg-slate-950 font-sans text-slate-100">{children}</body>
+    <html
+      lang={meta.tag}
+      dir={meta.dir}
+      className={`h-full ${manrope.variable} ${jetbrains.variable}`}
+    >
+      <body className="min-h-full bg-paper font-sans text-ink antialiased">
+        {children}
+      </body>
     </html>
   );
 }
