@@ -36,6 +36,34 @@ export const repoUrlSchema = z
       "Invalid repository URL. Expected format: https://github.com/owner/repository",
   });
 
+export function isPrivateOrLocalHost(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  if (
+    lower === "localhost" ||
+    lower === "127.0.0.1" ||
+    lower === "0.0.0.0" ||
+    lower === "::1" ||
+    lower.endsWith(".localhost") ||
+    lower.endsWith(".local") ||
+    lower.endsWith(".internal")
+  ) {
+    return true;
+  }
+
+  // IPv4 private & link-local ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
+  const ipv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(lower);
+  if (ipv4Match) {
+    const o1 = Number(ipv4Match[1]);
+    const o2 = Number(ipv4Match[2]);
+    if (o1 === 127 || o1 === 0) return true;
+    if (o1 === 10) return true;
+    if (o1 === 172 && o2 >= 16 && o2 <= 31) return true;
+    if (o1 === 192 && o2 === 168) return true;
+    if (o1 === 169 && o2 === 254) return true;
+  }
+  return false;
+}
+
 export const productionUrlSchema = z
   .string()
   .min(1, "A production URL is required.")
@@ -43,13 +71,16 @@ export const productionUrlSchema = z
     (value) => {
       try {
         const url = new URL(value);
-        return url.protocol === "http:" || url.protocol === "https:";
+        if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+        if (isPrivateOrLocalHost(url.hostname)) return false;
+        return true;
       } catch {
         return false;
       }
     },
     {
-      message: "Invalid production URL: it must start with http:// or https://.",
+      message:
+        "Invalid production URL: must be a public HTTP/HTTPS URL (internal and private IP addresses are blocked for security).",
     },
   );
 

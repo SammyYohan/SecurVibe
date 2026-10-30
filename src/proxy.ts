@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { DEFAULT_LOCALE, LOCALES } from "@/lib/i18n/config";
 
 /** Redirige vers la locale préférée de l'utilisateur (Accept-Language). */
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   const hasLocale = LOCALES.some(
