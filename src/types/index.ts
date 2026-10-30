@@ -24,7 +24,7 @@ const isoTimestampSchema = z
   .string()
   .regex(
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/,
-    "Horodatage ISO 8601 attendu.",
+    "ISO 8601 timestamp expected.",
   );
 
 export const testStepSchema = z.object({
@@ -67,7 +67,7 @@ export const scanEventSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("done"),
     score: z.number().int().min(0).max(100),
-    mode: z.literal("demo"),
+    mode: z.enum(["demo", "real"]),
   }),
   z.object({
     type: z.literal("error"),
@@ -105,7 +105,7 @@ export const dashboardStatusSchema = z.enum([
 ]);
 export type DashboardStatus = z.infer<typeof dashboardStatusSchema>;
 
-export const scanPhaseSchema = z.enum(["scan", "journey"]);
+export const scanPhaseSchema = z.enum(["scan", "site"]);
 export type ScanPhase = z.infer<typeof scanPhaseSchema>;
 
 /** Plage de progression allouée à un service dans le flux global (0-100). */

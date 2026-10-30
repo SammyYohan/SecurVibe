@@ -1,10 +1,9 @@
-import "server-only";
-
 import { isAbortError } from "@/lib/sleep";
 import { getServerEnv } from "@/lib/env";
 import { computeScore } from "@/lib/score";
 import { scanRequestSchema } from "@/lib/validation";
-import { runPurchaseJourney } from "@/services/testService";
+import { pruneRateLimitBuckets, rateLimit } from "@/lib/rateLimit";
+import { runProductionAudit } from "@/services/siteService";
 import { scanRepository } from "@/services/scanService";
 import type {
   Finding,
@@ -15,16 +14,13 @@ import type {
 
 export const runtime = "nodejs";
 
-const PRODUCTION_URL_FALLBACK = "https://mon-saas.com";
-
 const UNLOCK_STEP_ID = 4;
 
-const GENERIC_ERROR_MESSAGE =
-  "Une erreur interne est survenue pendant l'analyse.";
+const GENERIC_ERROR_MESSAGE = "An unexpected error occurred during the audit.";
 
-/** Plage de progression allouée à chaque service dans le flux global. */
+/** Plages de progression allouées à chaque service dans le flux global. */
 const SCAN_RANGE: ProgressRange = { from: 0, to: 60 };
-const JOURNEY_RANGE: ProgressRange = { from: 60, to: 100 };
+const SITE_RANGE: ProgressRange = { from: 60, to: 100 };
 
 const STREAM_HEADERS: Record<string, string> = {
   "Content-Type": "application/x-ndjson; charset=utf-8",
@@ -33,35 +29,30 @@ const STREAM_HEADERS: Record<string, string> = {
 };
 
 export async function POST(request: Request): Promise<Response> {
+  let startedController: AbortController | undefined;
   try {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return respond400(
-        "INVALID_REQUEST",
-        "Requête invalide : corps JSON illisible.",
-      );
+    const tokens = parseScanRequest(await request.json().catch(() => null));
+    if (tokens === null) {
+      return respond400("INVALID_REQUEST", "Invalid request: provide a GitHub repository URL and a production URL.");
     }
 
-    const parsed = scanRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      const issue = parsed.error.issues[0];
-      return respond400(
-        "INVALID_URL",
-        issue?.message ?? "Requête invalide.",
+    // Protection anti-abus (mémoire locale, par IP).
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
+    const limit = rateLimit(ip);
+    if (limit.ok === false) {
+      return Response.json(
+        { error: { code: "RATE_LIMITED", message: "Too many audits in a short time. Wait a minute and retry." } },
+        { status: 429, headers: { "Cache-Control": "no-store" } },
       );
     }
+    if (Math.random() < 0.05) pruneRateLimitBuckets();
 
-    const { repoUrl } = parsed.data;
-    const productionUrl = parsed.data.productionUrl ?? PRODUCTION_URL_FALLBACK;
-
-    // Un seul contrôleur : relié au signal de la requête ET au cancel()
-    // du flux, pour que les générateurs s'arrêtent si le client coupe.
-    const controller = new AbortController();
-    const onClientAbort = (): void => controller.abort();
+    // Un seul contrôleur d'annulation: requête client + cancel() du flux.
+    startedController = new AbortController();
+    const activeController = startedController;
+    const onClientAbort = (): void => activeController.abort();
     if (request.signal.aborted) {
-      controller.abort();
+      activeController.abort();
     } else {
       request.signal.addEventListener("abort", onClientAbort, { once: true });
     }
@@ -74,12 +65,9 @@ export async function POST(request: Request): Promise<Response> {
         const send = (event: ScanEvent): void => {
           if (isClosed) return;
           try {
-            streamController.enqueue(
-              encoder.encode(`${JSON.stringify(event)}\n`),
-            );
+            streamController.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
           } catch {
-            // Contrôleur déjà fermé : ignorer, le flux est coupé.
-            isClosed = true;
+            isClosed = true; // contrôleur déjà fermé
           }
         };
 
@@ -94,29 +82,15 @@ export async function POST(request: Request): Promise<Response> {
         };
 
         try {
-          let serverEnvReady = true;
-          try {
-            getServerEnv();
-          } catch {
-            serverEnvReady = false;
-          }
-          if (!serverEnvReady) {
-            send({
-              type: "error",
-              code: "INTERNAL_ERROR",
-              message:
-                "Configuration serveur indisponible. Réessayez plus tard.",
-            });
-            return;
-          }
+          getServerEnv();
 
           const findings: Finding[] = [];
           let scanError: ScanErrorEvent | null = null;
 
           for await (const event of scanRepository(
-            { repoUrl },
+            { repoUrl: tokens.repoUrl, githubToken: tokens.githubToken },
             SCAN_RANGE,
-            controller.signal,
+            activeController.signal,
           )) {
             if (event.type === "error") {
               scanError = event;
@@ -129,78 +103,91 @@ export async function POST(request: Request): Promise<Response> {
           }
 
           if (scanError !== null) {
+            // scanError est déjà un ScanEvent error valide (code + message).
             send(scanError);
-            return;
+            return; // pas d'audit site si le scan échoue
           }
 
-          // Parcours d'achat uniquement si le scan s'est terminé sans erreur
-          // et si la connexion du client est toujours active.
-          if (controller.signal.aborted) return;
 
-          let journeyFailed = false;
-          for await (const event of runPurchaseJourney(
-            { productionUrl },
-            JOURNEY_RANGE,
-            controller.signal,
-          )) {
-            if (event.type === "error") {
+          // Audit de production (réel) — exécuté uniquement si la connexion tient.
+          if (!activeController.signal.aborted) {
+            let journeyFailed = false;
+            for await (const event of runProductionAudit(
+              { productionUrl: tokens.productionUrl },
+              SITE_RANGE,
+              activeController.signal,
+            )) {
+              if (event.type === "error") {
+                send(event);
+                return;
+              }
+              if (event.type === "finding") {
+                findings.push(event.finding);
+              }
+              if (
+                event.type === "test_step" &&
+                event.step.id === UNLOCK_STEP_ID &&
+                event.step.status === "FAILED"
+              ) {
+                journeyFailed = true;
+              }
               send(event);
-              return;
             }
-            if (
-              event.type === "test_step" &&
-              event.step.id === UNLOCK_STEP_ID &&
-              event.step.status === "FAILED"
-            ) {
-              journeyFailed = true;
-            }
-            send(event);
-          }
 
-          send({
-            type: "done",
-            score: computeScore(findings, journeyFailed),
-            mode: "demo",
-          });
+            send({
+              type: "done",
+              score: computeScore(findings, journeyFailed),
+              mode: "real",
+            });
+          }
         } catch (error) {
           if (!isAbortError(error)) {
             console.error(
-              "[guardvibe] Erreur inattendue pendant l'analyse.",
+              "[guardvibe] Unexpected error during audit.",
               error instanceof Error ? error.name : typeof error,
             );
             send({ type: "error", code: "INTERNAL_ERROR", message: GENERIC_ERROR_MESSAGE });
           }
-          // Annulation : le flux se ferme sans événement d'erreur.
+          // Annulation: fermeture silencieuse, sans événement d'erreur.
         } finally {
           request.signal.removeEventListener("abort", onClientAbort);
           closeStream();
         }
       },
       cancel(): void {
-        controller.abort();
+        startedController?.abort();
       },
     });
 
     return new Response(stream, { status: 200, headers: STREAM_HEADERS });
   } catch (error) {
-    // Filet de sécurité : aucune erreur ne doit casser l'échange HTTP.
-    if (!isAbortError(error)) {
-      console.error(
-        "[guardvibe] Erreur inattendue lors du lancement du scan.",
-        error instanceof Error ? error.name : typeof error,
-      );
-      return respond400(
-        "INTERNAL_ERROR",
-        "Impossible de lancer l'analyse. Réessayez.",
-      );
+    if (isAbortError(error)) {
+      return new Response(null, { status: 499, headers: { "Cache-Control": "no-store" } });
     }
-    return new Response(null, { status: 499, headers: { "Cache-Control": "no-store" } });
+    // Invalides/inattendus au niveau de l'enveloppe: jamais de stack au client.
+    console.error(
+      "[guardvibe] Unexpected error while starting the audit.",
+      error instanceof Error ? error.name : typeof error,
+    );
+    return respond400("INTERNAL_ERROR", "Could not start the audit. Please retry.");
   }
 }
 
+function parseScanRequest(body: unknown): {
+  repoUrl: string;
+  productionUrl: string;
+  githubToken: string | undefined;
+} | null {
+  const parsed = scanRequestSchema.safeParse(body);
+  if (!parsed.success) return null;
+  // Le token ne transite QUE dans cette requête; jamais persisté.
+  return {
+    repoUrl: parsed.data.repoUrl,
+    productionUrl: parsed.data.productionUrl,
+    githubToken: parsed.data.githubToken,
+  };
+}
+
 function respond400(code: string, message: string): Response {
-  return Response.json(
-    { error: { code, message } },
-    { status: 400, headers: { "Cache-Control": "no-store" } },
-  );
+  return Response.json({ error: { code, message } }, { status: 400, headers: { "Cache-Control": "no-store" } });
 }

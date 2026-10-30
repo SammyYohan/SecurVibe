@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, Play, Square } from "lucide-react";
+import { KeyRound, Loader2, Play, Square } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/lib/i18n/client";
 import { scanRequestSchema, type ScanRequest } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 
@@ -22,17 +23,20 @@ type FieldErrors = {
 const EMPTY_ERRORS: FieldErrors = { repoUrl: null, productionUrl: null };
 
 export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
+  const { t } = useI18n();
   const [repoUrl, setRepoUrl] = useState("");
   const [productionUrl, setProductionUrl] = useState("");
+  const [githubToken, setGithubToken] = useState("");
   const [errors, setErrors] = useState<FieldErrors>(EMPTY_ERRORS);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    if (isRunning) return; // double soumission impossible pendant un scan
+    if (isRunning) return; // double soumission impossible pendant un audit
 
     const parsed = scanRequestSchema.safeParse({
       repoUrl: repoUrl.trim(),
-      productionUrl: productionUrl.trim() === "" ? undefined : productionUrl.trim(),
+      productionUrl: productionUrl.trim(),
+      githubToken: githubToken.trim() === "" ? undefined : githubToken.trim(),
     });
 
     if (!parsed.success) {
@@ -53,6 +57,7 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
     onStart({
       repoUrl: parsed.data.repoUrl,
       productionUrl: parsed.data.productionUrl,
+      githubToken: parsed.data.githubToken,
     });
   };
 
@@ -60,14 +65,14 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
     <form
       onSubmit={handleSubmit}
       noValidate
-      className="grid grid-cols-1 items-start gap-4 md:grid-cols-[minmax(0,7fr)_minmax(0,6fr)_auto]"
+      className="grid grid-cols-1 items-start gap-4 md:grid-cols-[minmax(0,6fr)_minmax(0,5fr)_minmax(0,5fr)_auto]"
     >
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="repo-url"
           className="text-sm font-medium text-slate-300"
         >
-          URL du dépôt GitHub
+          {t("dashboard.repoUrlLabel")}
         </label>
         <Input
           id="repo-url"
@@ -75,7 +80,7 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
           value={repoUrl}
           onChange={(event) => setRepoUrl(event.target.value)}
           onKeyDown={() => setErrors(EMPTY_ERRORS)}
-          placeholder="https://github.com/utilisateur/depot"
+          placeholder="https://github.com/owner/repository"
           autoComplete="off"
           spellCheck={false}
           disabled={isRunning}
@@ -97,8 +102,7 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
           htmlFor="production-url"
           className="text-sm font-medium text-slate-300"
         >
-          URL de production{" "}
-          <span className="font-normal text-slate-500">(optionnel)</span>
+          {t("dashboard.productionUrlLabel")}
         </label>
         <Input
           id="production-url"
@@ -106,7 +110,7 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
           value={productionUrl}
           onChange={(event) => setProductionUrl(event.target.value)}
           onKeyDown={() => setErrors(EMPTY_ERRORS)}
-          placeholder="https://mon-saas.com"
+          placeholder="https://your-saas.com"
           autoComplete="off"
           spellCheck={false}
           disabled={isRunning}
@@ -123,6 +127,31 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
         ) : null}
       </div>
 
+      <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor="github-token"
+          className="flex items-center gap-1.5 text-sm font-medium text-slate-300"
+        >
+          <KeyRound className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+          {t("dashboard.tokenLabel")}
+        </label>
+        <Input
+          id="github-token"
+          name="githubToken"
+          type="password"
+          value={githubToken}
+          onChange={(event) => setGithubToken(event.target.value)}
+          placeholder={t("dashboard.tokenPlaceholder")}
+          autoComplete="off"
+          spellCheck={false}
+          disabled={isRunning}
+          aria-describedby="github-token-hint"
+        />
+        <p id="github-token-hint" className="text-xs text-slate-500">
+          {t("dashboard.tokenHint")}
+        </p>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 md:pt-[26px]">
         <Button type="submit" disabled={isRunning}>
           {isRunning ? (
@@ -130,12 +159,12 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
           ) : (
             <Play className="h-4 w-4" aria-hidden="true" />
           )}
-          Lancer l&apos;Analyse
+          {isRunning ? t("dashboard.running") : t("dashboard.start")}
         </Button>
         {isRunning ? (
           <Button type="button" variant="outline" onClick={onCancel}>
             <Square className="h-4 w-4" aria-hidden="true" />
-            Annuler
+            {t("dashboard.cancel")}
           </Button>
         ) : null}
       </div>

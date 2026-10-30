@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * URL d'un dépôt GitHub : https://github.com/<owner>/<repo>
- * Redefinie ici pour rester testable sans accès réseau.
+ * Redéfinie ici pour rester testable sans accès réseau.
  * Les schémas de ce fichier sont partagés entre le client et la route API.
  */
 export const GITHUB_REPO_REGEX =
@@ -30,15 +30,15 @@ export function parseGithubRepoUrl(url: string): GithubRepoRef | null {
 
 export const repoUrlSchema = z
   .string()
-  .min(1, "L'URL du dépôt GitHub est requise.")
+  .min(1, "A GitHub repository URL is required.")
   .refine((value) => parseGithubRepoUrl(value) !== null, {
     message:
-      "URL de dépôt GitHub invalide. Format attendu : https://github.com/propriétaire/dépôt",
+      "Invalid repository URL. Expected format: https://github.com/owner/repository",
   });
 
 export const productionUrlSchema = z
   .string()
-  .min(1, "L'URL de production est requise si elle est fournie.")
+  .min(1, "A production URL is required.")
   .refine(
     (value) => {
       try {
@@ -49,14 +49,17 @@ export const productionUrlSchema = z
       }
     },
     {
-      message:
-        "URL de production invalide : elle doit commencer par http:// ou https://.",
+      message: "Invalid production URL: it must start with http:// or https://.",
     },
   );
 
+export type ProductionUrlSchema = z.infer<typeof productionUrlSchema>;
+
 export const scanRequestSchema = z.object({
   repoUrl: repoUrlSchema,
-  productionUrl: productionUrlSchema.optional(),
+  productionUrl: productionUrlSchema,
+  /** Token GitHub optionnel fourni par l'utilisateur (sans stockage). */
+  githubToken: z.string().optional(),
 });
 
 export type ScanRequest = z.infer<typeof scanRequestSchema>;

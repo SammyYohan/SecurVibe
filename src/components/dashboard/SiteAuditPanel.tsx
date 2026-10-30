@@ -15,15 +15,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useI18n } from "@/lib/i18n/client";
+import { LOCALE_META } from "@/lib/i18n/config";
 import type { StepStatus, TestStep } from "@/types";
 
-export type LiveSimulatorProps = {
+export type SiteAuditPanelProps = {
   steps: TestStep[];
 };
 
-const EMPTY_MESSAGE = "En attente du lancement de l'analyse.";
+export function SiteAuditPanel({ steps }: SiteAuditPanelProps) {
+  const { t, locale } = useI18n();
 
-export function LiveSimulator({ steps }: LiveSimulatorProps) {
   const failedUnlock = useMemo(() => {
     const unlockStep = steps.find((step) => step.id === 4);
     return unlockStep?.status === "FAILED" ? unlockStep : null;
@@ -32,18 +34,18 @@ export function LiveSimulator({ steps }: LiveSimulatorProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Parcours d&apos;achat (simulation)</CardTitle>
+        <CardTitle>{t("dashboard.siteTitle")}</CardTitle>
       </CardHeader>
 
       <CardContent>
         {steps.length === 0 ? (
           <p className="py-8 text-center text-sm text-slate-400">
-            {EMPTY_MESSAGE}
+            {t("dashboard.siteEmpty")}
           </p>
         ) : (
           <ol className="flex flex-col gap-1" aria-live="polite">
             {steps.map((step) => (
-              <StepRow key={step.id} step={step} />
+              <StepRow key={step.id} step={step} localeTag={LOCALE_META[locale].tag} />
             ))}
           </ol>
         )}
@@ -58,7 +60,7 @@ export function LiveSimulator({ steps }: LiveSimulatorProps) {
               aria-hidden="true"
             />
             <span>
-              <span className="font-semibold">Échec du déblocage. </span>
+              <span className="font-semibold">{t("dashboard.siteFailedTitle")} </span>
               {failedUnlock.detail}
             </span>
           </div>
@@ -68,7 +70,13 @@ export function LiveSimulator({ steps }: LiveSimulatorProps) {
   );
 }
 
-function StepRow({ step }: { step: TestStep }) {
+function StepRow({
+  step,
+  localeTag,
+}: {
+  step: TestStep;
+  localeTag: string;
+}) {
   return (
     <li className="flex items-start gap-3 py-2">
       <StepIcon status={step.status} />
@@ -83,14 +91,22 @@ function StepRow({ step }: { step: TestStep }) {
           {step.label}
         </p>
         {step.detail !== undefined ? (
-          <p className="text-xs text-red-300">{step.detail}</p>
+          <p
+            className={
+              step.status === "FAILED"
+                ? "text-xs text-red-300"
+                : "text-xs text-slate-500"
+            }
+          >
+            {step.detail}
+          </p>
         ) : null}
       </div>
       <time
         dateTime={step.timestamp}
         className="shrink-0 pt-0.5 font-mono text-xs text-slate-500"
       >
-        {formatTime(step.timestamp)}
+        {formatTime(step.timestamp, localeTag)}
       </time>
     </li>
   );
@@ -119,9 +135,9 @@ function StepIcon({ status }: { status: StepStatus }) {
   }
 }
 
-function formatTime(isoTimestamp: string): string {
+function formatTime(isoTimestamp: string, localeTag: string): string {
   try {
-    return new Date(isoTimestamp).toLocaleTimeString("fr-FR");
+    return new Date(isoTimestamp).toLocaleTimeString(localeTag);
   } catch {
     return isoTimestamp;
   }

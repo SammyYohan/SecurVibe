@@ -1,13 +1,16 @@
 "use client";
 
 import { AlertTriangle, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
-import { LiveSimulator } from "@/components/dashboard/LiveSimulator";
 import { ScanForm } from "@/components/dashboard/ScanForm";
 import { ScanStatus } from "@/components/dashboard/ScanStatus";
 import { SecurityReport } from "@/components/dashboard/SecurityReport";
+import { SiteAuditPanel } from "@/components/dashboard/SiteAuditPanel";
 import { Badge } from "@/components/ui/badge";
+import { I18nProvider, useI18n } from "@/lib/i18n/client";
+import type { Locale } from "@/lib/i18n/config";
 import { isAbortError } from "@/lib/sleep";
 import { computeScore } from "@/lib/score";
 import type { ScanRequest } from "@/lib/validation";
@@ -19,6 +22,12 @@ import type {
   TestStep,
 } from "@/types";
 import { apiErrorSchema, isScanEvent } from "@/types";
+
+export type DashboardProps = {
+  locale: Locale;
+  /** Textes pré-mergés (locale → repli EN) calculés côté serveur. */
+  dictionary: Record<string, string>;
+};
 
 type DashboardState = {
   status: DashboardStatus;
@@ -51,9 +60,6 @@ const RUNNING_STATE: DashboardState = {
   status: "running",
 };
 
-const STREAM_INTERRUPTED_MESSAGE =
-  "Connexion interrompue avant la fin de l'analyse.";
-
 const UNLOCK_STEP_ID = 4;
 
 function reducer(state: DashboardState, action: ScanAction): DashboardState {
@@ -80,7 +86,7 @@ function reducer(state: DashboardState, action: ScanAction): DashboardState {
           // UPSERT par numéro d'étape : la même ligne évolue de PENDING au statut final.
           return {
             ...state,
-            phase: "journey",
+            phase: "site",
             steps: upsertById(state.steps, event.step),
           };
         case "done":
@@ -110,7 +116,16 @@ function upsertById<T extends { id: string | number }>(
   return [...items, item];
 }
 
-export function Dashboard() {
+export function Dashboard({ locale, dictionary }: DashboardProps) {
+  return (
+    <I18nProvider locale={locale} snapshot={dictionary}>
+      <DashboardInner />
+    </I18nProvider>
+  );
+}
+
+function DashboardInner() {
+  const { t, locale } = useI18n();
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -168,14 +183,14 @@ export function Dashboard() {
           type: "FAILED",
           message: parsed.success
             ? parsed.data.error.message
-            : "Échec du lancement de l'analyse.",
+            : "The audit could not be started.",
         });
         return;
       }
 
       const responseBody = response.body;
       if (responseBody === null) {
-        dispatch({ type: "FAILED", message: STREAM_INTERRUPTED_MESSAGE });
+        dispatch({ type: "FAILED", message: t("dashboard.streamInterrupted") });
         return;
       }
 
@@ -203,7 +218,7 @@ export function Dashboard() {
       }
 
       if (!sawTerminator && !controller.signal.aborted) {
-        dispatch({ type: "FAILED", message: STREAM_INTERRUPTED_MESSAGE });
+        dispatch({ type: "FAILED", message: t("dashboard.streamInterrupted") });
       }
     } catch (error) {
       if (isAbortError(error)) {
@@ -214,16 +229,16 @@ export function Dashboard() {
         return;
       }
       console.error(
-        "[guardvibe] Erreur réseau pendant l'analyse.",
+        "[guardvibe] Network error during audit.",
         error instanceof Error ? error.name : typeof error,
       );
-      dispatch({ type: "FAILED", message: STREAM_INTERRUPTED_MESSAGE });
+      dispatch({ type: "FAILED", message: t("dashboard.streamInterrupted") });
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null;
       }
     }
-  }, []);
+  }, [t]);
 
   const handleStart = useCallback(
     (input: ScanRequest): void => {
@@ -264,18 +279,22 @@ export function Dashboard() {
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <Link
+            href={`/${locale}`}
+            className="flex items-center gap-3"
+            aria-label={t("meta.siteName")}
+          >
             <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-900/50 bg-emerald-950/50">
               <ShieldCheck
                 className="h-5 w-5 text-emerald-400"
                 aria-hidden="true"
               />
             </span>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-100">
-              GuardVibe
-            </h1>
-          </div>
-          <Badge variant="warning">Mode démo · données simulées</Badge>
+            <span className="text-2xl font-semibold tracking-tight text-slate-100">
+              {t("meta.siteName")}
+            </span>
+          </Link>
+          <Badge variant="warning">{t("dashboard.bannerDemo")}</Badge>
         </div>
 
         <ScanForm
@@ -309,16 +328,27 @@ export function Dashboard() {
       />
 
       <section
-        aria-label="Résultats de l'analyse"
+        aria-label={t("dashboard.findTitle")}
         className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2"
       >
         <SecurityReport findings={state.findings} />
-        <LiveSimulator steps={state.steps} />
+        <SiteAuditPanel steps={state.steps} />
       </section>
 
-      <footer className="mt-auto border-t border-slate-800/70 pt-6 text-center text-xs leading-relaxed text-slate-500">
-        GuardVibe · démo. Ne scannez que des dépôts et des sites dont vous êtes
-        propriétaire ou pour lesquels vous avez une autorisation explicite.
+      <footer className="mt-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-slate-800/70 pt-6 text-center text-xs leading-relaxed text-slate-500">
+        <span className="w-full">{t("dashboard.footer")}</span>
+        <Link
+          href={`/${locale}/legal`}
+          className="transition-colors hover:text-emerald-300"
+        >
+          {t("footer.linksLegal")}
+        </Link>
+        <Link
+          href={`/${locale}/pricing`}
+          className="transition-colors hover:text-emerald-300"
+        >
+          {t("footer.linksPricing")}
+        </Link>
       </footer>
     </div>
   );

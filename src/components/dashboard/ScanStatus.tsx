@@ -12,6 +12,7 @@ import { useMemo, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
+import { useI18n } from "@/lib/i18n/client";
 import { getScoreTier, type ScoreTier } from "@/lib/score";
 import { cn } from "@/lib/utils";
 import type { DashboardStatus, ScanPhase } from "@/types";
@@ -43,23 +44,24 @@ export function ScanStatus({
   partial,
   errorMessage,
 }: ScanStatusProps) {
+  const { t } = useI18n();
   const tier: ScoreTier | null = score === null ? null : getScoreTier(score);
   const animatedScore = useAnimatedNumber(score ?? 0);
 
   const statusLabel = useMemo(() => {
     switch (status) {
       case "idle":
-        return "En attente";
+        return t("dashboard.statusIdle");
       case "running":
-        return phase === "scan" ? "Analyse du code..." : "Test du parcours d'achat...";
+        return phase === "scan" ? t("dashboard.statusScan") : t("dashboard.statusSite");
       case "done":
-        return "Terminé";
+        return t("dashboard.statusDone");
       case "error":
-        return "Erreur";
+        return t("dashboard.statusError");
       case "cancelled":
-        return "Analyse annulée";
+        return t("dashboard.statusCancelled");
     }
-  }, [status, phase]);
+  }, [status, phase, t]);
 
   const statusIcon = useMemo((): ReactNode => {
     switch (status) {
@@ -94,24 +96,22 @@ export function ScanStatus({
   // sans répéter chaque événement du flux.
   const liveAnnouncement = useMemo(() => {
     if (status === "running" && phase === "scan") {
-      return "Analyse démarrée : examen du code en cours.";
+      return t("dashboard.liveRegionStart");
     }
-    if (status === "running" && phase === "journey") {
-      return "Analyse du code terminée : test du parcours d'achat en cours.";
+    if (status === "running" && phase === "site") {
+      return t("dashboard.liveRegionSite");
     }
     if (status === "done") {
-      return score === null
-        ? "Analyse terminée."
-        : `Analyse terminée. Score final ${score} sur 100.`;
+      return t("dashboard.liveRegionDone", { score: String(score ?? 0) });
     }
     if (status === "error") {
-      return `Analyse arrêtée suite à une erreur. ${errorMessage ?? ""}`.trim();
+      return t("dashboard.liveRegionError", { message: errorMessage ?? "" }).trim();
     }
     if (status === "cancelled") {
-      return "Analyse annulée par l'utilisateur.";
+      return t("dashboard.liveRegionCancel");
     }
     return "";
-  }, [status, phase, score, errorMessage]);
+  }, [status, phase, score, errorMessage, t]);
 
   return (
     <Card className="relative overflow-hidden">
@@ -129,11 +129,11 @@ export function ScanStatus({
               {statusLabel}
             </p>
             <Badge variant="neutral" className="ml-auto md:ml-4">
-              {phase === "journey" ? "Parcours d'achat" : "Scan de code"}
+              {phase === "site" ? t("dashboard.phaseSite") : t("dashboard.phaseScan")}
             </Badge>
           </div>
 
-          <Progress value={progress} ariaLabel="Progression globale de l'analyse" />
+          <Progress value={progress} ariaLabel={t("dashboard.progressLabel")} />
 
           <p className="text-xs tabular-nums text-slate-500">
             {Math.round(progress)}&nbsp;%&nbsp;/&nbsp;100&nbsp;%
@@ -142,7 +142,7 @@ export function ScanStatus({
 
         <div className="flex flex-col items-start md:items-end">
           <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
-            Score de santé
+            {t("dashboard.scoreLabel")}
           </span>
           <div className="flex items-baseline gap-2">
             <span
@@ -154,7 +154,7 @@ export function ScanStatus({
               {score === null ? "--" : animatedScore}
             </span>
             {partial && score !== null ? (
-              <span className="text-base text-slate-400">(partiel)</span>
+              <span className="text-base text-slate-400">{t("dashboard.partial")}</span>
             ) : null}
             {finalScore && score !== null ? (
               <span className="text-base text-slate-500">/ 100</span>
