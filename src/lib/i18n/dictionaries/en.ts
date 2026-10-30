@@ -25,11 +25,16 @@ export const en = {
     ctaPrimary: "Run a free audit",
     ctaSecondary: "See pricing",
     note1: "No account required",
-    note2: "Scans run with real data",
+    note2: "Nothing is stored on our side",
     note3: "Result in ≈ 60 s",
     previewLabel: "Audit preview",
     previewScore: "92",
-    previewCaption: "Repository + production audit report",
+    previewCaption: "Illustrative sample report",
+  },
+  cta: {
+    finalTitle: "Fixed it? Re-run the audit.",
+    finalText:
+      "Copy the fix list into your coding assistant, fix the findings, then re-audit with one click — your score is saved in your browser so you can watch it climb.",
   },
   benefits: {
     kicker: "Why GuardVibe",

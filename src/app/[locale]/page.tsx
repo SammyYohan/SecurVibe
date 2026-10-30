@@ -283,24 +283,13 @@ export default async function LandingPage({ params }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ------------------------------- CTA -------------------------------- */}
-      <section className="py-10">
+      {/* ----------------------------- CTA FINAL ---------------------------- */}
+      <section className="pb-14 pt-6">
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-emerald-900/50 bg-emerald-950/30 p-8 text-center">
-          <h2 className="text-xl font-bold sm:text-2xl">{t("hero.title2")}</h2>
-          <Link
-            href={`${base}/app`}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-500 px-6 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400"
-          >
-            <Rocket className="h-4 w-4" aria-hidden="true" />
-            {t("hero.ctaPrimary")}
-          </Link>
-        </div>
-      </section>
-
-      {/* -------------------------------- CTA -------------------------------- */}
-      <section className="py-10">
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-emerald-900/50 bg-emerald-950/30 p-8 text-center">
-          <h2 className="text-xl font-bold sm:text-2xl">{t("hero.title2")}</h2>
+          <h2 className="text-xl font-bold sm:text-2xl">{t("cta.finalTitle")}</h2>
+          <p className="max-w-xl text-sm leading-relaxed text-slate-300">
+            {t("cta.finalText")}
+          </p>
           <Link
             href={`${base}/app`}
             className="inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-500 px-6 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400"
