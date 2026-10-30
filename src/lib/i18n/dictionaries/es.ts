@@ -168,4 +168,10 @@ export const es: Partial<Record<FlatKey, string>> = {
   "footer.linksLegal": "Términos y privacidad",
   "footer.demo": "Hecho con datos reales: GitHub, OSV.dev y comprobaciones HTTP en vivo.",
   "footer.rights": "© {year} GuardVibe. Uso responsable: audita solo lo que te pertenece o tienes permiso para auditar.",
+  "dashboard.rescan": "Reauditar tras las correcciones",
+  "dashboard.trendUp": "↗ +{delta} frente a la auditoría anterior",
+  "dashboard.trendDown": "↘ −{delta} frente a la auditoría anterior",
+  "dashboard.trendFlat": "= igual que la auditoría anterior",
+  "dashboard.copyList": "Copiar lista de arreglos (Markdown)",
+  "dashboard.copied": "Copiado",
 };

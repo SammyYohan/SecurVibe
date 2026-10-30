@@ -1,11 +1,13 @@
 "use client";
 
-import { ShieldAlert } from "lucide-react";
+import { Check, Copy, ShieldAlert } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   Badge,
   type BadgeVariant,
 } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -25,11 +27,92 @@ const SEVERITY_BADGE_VARIANT: Record<Severity, BadgeVariant> = {
   OK: "success",
 };
 
+/**
+ * Génère la liste de correctifs à coller dans l'assistant de code de
+ * l'utilisateur (Cursor, Claude Code, Copilot…). Les contrôles réussis
+ * (OK) sont volontairement exclus : rien à corriger.
+ */
+export function buildFixListMarkdown(
+  critical: readonly Finding[],
+  warning: readonly Finding[],
+): string {
+  const lines: string[] = [
+    "# Security fix checklist (GuardVibe audit)",
+    "",
+    "Generated from a real scan. Fix each item with your AI coding assistant (Cursor, Claude Code, Copilot…), then re-run the audit to verify.",
+  ];
+  const section = (title: string, items: readonly Finding[]): void => {
+    if (items.length === 0) return;
+    lines.push("", `## ${title}`, "");
+    for (const finding of items) {
+      lines.push(
+        `- [ ] \`${finding.file}\` — ${finding.issue}`,
+        `  Fix: ${finding.fix.trim().replace(/\n/g, "\n  ")}`,
+      );
+    }
+  };
+  section("Critical", critical);
+  section("Warnings", warning);
+  lines.push("");
+  return lines.join("\n");
+}
+
+/** Clipboard API quand disponible (contexte sécurisé), repli executCommand. */
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.clipboard !== undefined
+  ) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // On tente le repli ci-dessous.
+    }
+  }
+  try {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "true");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(area);
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
 export function SecurityReport({ findings }: SecurityReportProps) {
   const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<number | null>(null);
   const critical = findings.filter((f) => f.severity === "CRITICAL");
   const warning = findings.filter((f) => f.severity === "WARNING");
   const ok = findings.filter((f) => f.severity === "OK");
+
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current !== null) {
+        window.clearTimeout(copiedTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const handleCopyList = useCallback(async (): Promise<void> => {
+    const succeeded = await copyTextToClipboard(
+      buildFixListMarkdown(critical, warning),
+    );
+    if (!succeeded) return;
+    setCopied(true);
+    copiedTimerRef.current = window.setTimeout(() => {
+      setCopied(false);
+    }, 2000);
+  }, [critical, warning]);
 
   const severityLabel: Record<Severity, string> = {
     CRITICAL: t("severities.critical"),
@@ -57,6 +140,25 @@ export function SecurityReport({ findings }: SecurityReportProps) {
       </CardHeader>
 
       <CardContent>
+        {critical.length > 0 || warning.length > 0 ? (
+          <div className="mb-3 flex">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={(): void => {
+                void handleCopyList();
+              }}
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+              ) : (
+                <Copy className="h-4 w-4" aria-hidden="true" />
+              )}
+              {copied ? t("dashboard.copied") : t("dashboard.copyList")}
+            </Button>
+          </div>
+        ) : null}
+
         {findings.length === 0 ? (
           <p className="py-8 text-center text-sm text-slate-400">
             {t("dashboard.emptyReport")}

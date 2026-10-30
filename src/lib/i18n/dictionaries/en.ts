@@ -205,6 +205,12 @@ export const en = {
     streamInterrupted:
       "The audit stream ended before completion. Retry — nothing left your browser.",
     findTitle: "Results of the audit",
+    rescan: "Re-audit after fixes",
+    trendUp: "↗ +{delta} vs previous audit",
+    trendDown: "↘ −{delta} vs previous audit",
+    trendFlat: "= same as previous audit",
+    copyList: "Copy fix list (Markdown)",
+    copied: "Copied",
   },
   severities: {
     critical: "Critical",

@@ -27,6 +27,8 @@ export type ScanStatusProps = {
   finalScore: boolean;
   partial: boolean;
   errorMessage: string | null;
+  /** Score de l'audit précédent sur la même cible (historique local), sinon null. */
+  previousScore: number | null;
 };
 
 const TIER_TEXT_COLOR: Record<ScoreTier, string> = {
@@ -43,10 +45,33 @@ export function ScanStatus({
   finalScore,
   partial,
   errorMessage,
+  previousScore,
 }: ScanStatusProps) {
   const { t } = useI18n();
   const tier: ScoreTier | null = score === null ? null : getScoreTier(score);
   const animatedScore = useAnimatedNumber(score ?? 0);
+
+  // Tendance uniquement sur les scores finals de la même cible.
+  const delta =
+    finalScore && score !== null && previousScore !== null
+      ? score - previousScore
+      : null;
+  const trend: "up" | "down" | "flat" | null =
+    delta === null
+      ? null
+      : delta > 0
+        ? "up"
+        : delta < 0
+          ? "down"
+          : "flat";
+  const trendText =
+    delta === null
+      ? null
+      : delta > 0
+        ? t("dashboard.trendUp", { delta })
+        : delta < 0
+          ? t("dashboard.trendDown", { delta: Math.abs(delta) })
+          : t("dashboard.trendFlat");
 
   const statusLabel = useMemo(() => {
     switch (status) {
@@ -160,6 +185,18 @@ export function ScanStatus({
               <span className="text-base text-slate-500">/ 100</span>
             ) : null}
           </div>
+          {trendText !== null ? (
+            <p
+              className={cn(
+                "mt-1 text-xs font-medium",
+                trend === "up" && "text-emerald-400",
+                trend === "down" && "text-red-300",
+                trend === "flat" && "text-slate-400",
+              )}
+            >
+              {trendText}
+            </p>
+          ) : null}
         </div>
       </CardContent>
 

@@ -18,6 +18,12 @@
 
 **Score** : `100 − 15 × critiques − 5 × avertissements − 10 × (échec de l'étape décisive de l'audit de production)`. Chaque constat embarque une explication et un correctif copier-collable.
 
+### Boucle de correction (100 % côté navigateur)
+
+1. **« Copier la liste de correctifs (Markdown) »** — checklist prête à coller dans Cursor / Claude Code / Copilot : chaque constat devient `- [ ]` avec son correctif, puis on ré-audite pour vérifier.
+2. **Tendance locale** — le score est comparé à l'audit précédent **sur la même cible** (repo + URL de production) : `↗ +X` / `↘ −X` / `=`. Historique dans `localStorage` (50 derniers audits, aucune donnée serveur, jamais le jeton).
+3. **« Ré-auditer après corrections »** — relance en un clic la même cible avec les mêmes paramètres.
+
 ---
 
 ## Stack

@@ -1,9 +1,11 @@
 "use client";
 
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { z } from "zod";
 
+import { Button } from "@/components/ui/button";
 import { ScanForm } from "@/components/dashboard/ScanForm";
 import { ScanStatus } from "@/components/dashboard/ScanStatus";
 import { SecurityReport } from "@/components/dashboard/SecurityReport";
@@ -61,6 +63,43 @@ const RUNNING_STATE: DashboardState = {
 };
 
 const UNLOCK_STEP_ID = 4;
+
+/* ------------------------------------------------------------------ */
+/* Historique local des scores (strictement dans le navigateur).       */
+/* Pas d'inscription, pas de serveur : la tendance est une comparaison */
+/* entre deux passages sur la même cible (repo + URL de production).   */
+/* ------------------------------------------------------------------ */
+
+const SCORE_HISTORY_KEY = "guardvibe.scoreHistory.v1";
+const MAX_HISTORY_ENTRIES = 50;
+
+type ScoreEntry = {
+  /** Score final 0–100 de l'audit. */
+  score: number;
+  /** Horodatage (millisecondes) du passage. */
+  at: number;
+  /** Cible auditée — jamais le jeton GitHub. */
+  target: string;
+};
+
+const scoreEntrySchema = z.object({
+  score: z.number().int().min(0).max(100),
+  at: z.number().int().nonnegative(),
+  target: z.string(),
+});
+
+const scoreHistorySchema = z.array(scoreEntrySchema).max(200);
+
+function loadScoreHistory(): ScoreEntry[] {
+  try {
+    const raw = window.localStorage.getItem(SCORE_HISTORY_KEY);
+    if (raw === null) return [];
+    const parsed = scoreHistorySchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
+  }
+}
 
 function reducer(state: DashboardState, action: ScanAction): DashboardState {
   switch (action.type) {
@@ -128,6 +167,14 @@ function DashboardInner() {
   const { t, locale } = useI18n();
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const abortRef = useRef<AbortController | null>(null);
+  const [previousScore, setPreviousScore] = useState<number | null>(null);
+
+  /** Dernier audit lancé : permet « Ré-auditer après corrections ». */
+  const [lastInput, setLastInput] = useState<ScanRequest | null>(null);
+  /** Cible de l'audit en cours (repoUrl → productionUrl), sans le jeton. */
+  const [currentTarget, setCurrentTarget] = useState("");
+  /** Miroir de l'historique (lecture unique au montage, écriture à chaque fin). */
+  const historyRef = useRef<ScoreEntry[]>([]);
 
   // Annulation au démontage : coupe la connexion en cours.
   useEffect(() => {
@@ -135,6 +182,40 @@ function DashboardInner() {
       abortRef.current?.abort();
     };
   }, []);
+
+  // Chargement de l'historique local, une seule fois, navigateur uniquement.
+  useEffect(() => {
+    historyRef.current = loadScoreHistory();
+  }, []);
+
+  // Un score final entre dans l'historique ; la tendance compare la même cible.
+  useEffect(() => {
+    if (state.status !== "done" || state.finalScore === null) return;
+    const score = state.finalScore;
+    const now = Date.now();
+    const history = historyRef.current;
+    const last = history[history.length - 1];
+    // Anti-doublon : double-invoke des effets (StrictMode) en développement.
+    if (last !== undefined && last.score === score && now - last.at < 2000) return;
+
+    const previous =
+      [...history].reverse().find((entry) => entry.target === currentTarget) ??
+      null;
+
+    historyRef.current = [
+      ...history.slice(-(MAX_HISTORY_ENTRIES - 1)),
+      { score, at: now, target: currentTarget },
+    ];
+    setPreviousScore(previous?.score ?? null);
+    try {
+      window.localStorage.setItem(
+        SCORE_HISTORY_KEY,
+        JSON.stringify(historyRef.current),
+      );
+    } catch {
+      // Stockage indisponible (navigation privée) : tendance absente, audit intact.
+    }
+  }, [state.status, state.finalScore, currentTarget]);
 
   const runScan = useCallback(async (input: ScanRequest): Promise<void> => {
     // Nouveau scan : annule l'éventuel scan en cours.
@@ -242,16 +323,31 @@ function DashboardInner() {
 
   const handleStart = useCallback(
     (input: ScanRequest): void => {
+      setLastInput(input);
+      setCurrentTarget(`${input.repoUrl} → ${input.productionUrl}`);
       void runScan(input);
     },
     [runScan],
   );
+
+  /** Re-lance le dernier audit avec exactement les mêmes paramètres. */
+  const handleRescan = useCallback((): void => {
+    if (lastInput === null) return;
+    void runScan(lastInput);
+  }, [runScan, lastInput]);
 
   const handleCancel = useCallback((): void => {
     abortRef.current?.abort();
   }, []);
 
   const isRunning = state.status === "running";
+
+  const rescanVisible =
+    !isRunning &&
+    lastInput !== null &&
+    (state.status === "done" ||
+      state.status === "error" ||
+      state.status === "cancelled");
 
   const journeyFailed = useMemo(
     () =>
@@ -325,7 +421,17 @@ function DashboardInner() {
         finalScore={state.finalScore !== null}
         partial={partial}
         errorMessage={state.errorMessage}
+        previousScore={previousScore}
       />
+
+      {rescanVisible ? (
+        <div className="flex justify-center">
+          <Button type="button" variant="outline" onClick={handleRescan}>
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            {t("dashboard.rescan")}
+          </Button>
+        </div>
+      ) : null}
 
       <section
         aria-label={t("dashboard.findTitle")}
