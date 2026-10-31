@@ -14,6 +14,13 @@ import type {
 
 export const runtime = "nodejs";
 
+/**
+ * Vercel : un audit enchaîne jusqu'à 50 lectures GitHub puis 4 contrôles
+ * HTTP/TLS. Sans cette valeur, la durée par défaut peut couper le flux
+ * avant l'événement final "done".
+ */
+export const maxDuration = 60;
+
 const UNLOCK_STEP_ID = 4;
 
 const GENERIC_ERROR_MESSAGE = "An unexpected error occurred during the audit.";

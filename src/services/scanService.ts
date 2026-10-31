@@ -204,7 +204,10 @@ export async function* scanRepository(
       .filter((entry) => entry.size === undefined || (entry.size >= 1 && entry.size <= MAX_FILE_BYTES))
       .slice(0, MAX_CODE_FILES);
 
-    const envFiles = blobs.filter((entry) => /^\.env(\..+)?$/.test(entry.path));
+    // Les gabarits versionnés (.env.example, .env.sample…) ne sont pas des secrets.
+    const envFiles = blobs.filter(
+      (entry) => /^\.env(\..+)?$/.test(entry.path) && !isEnvTemplate(entry.path),
+    );
     const hasLockfile = blobs.some(
       (entry) =>
         /^(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|npm-shrinkwrap\.json)$/.test(entry.path),
@@ -561,6 +564,14 @@ async function rawContent(
     if (isAbortError(error)) throw error;
     return null;
   }
+}
+
+/** Gabarits d'environnement versionnés : attendus dans un dépôt, jamais des secrets. */
+const ENV_TEMPLATE_RE =
+  /^\.env(?:\.[A-Za-z0-9_-]+)*\.(?:example|sample|template|dist|defaults)$/;
+
+function isEnvTemplate(path: string): boolean {
+  return ENV_TEMPLATE_RE.test(path);
 }
 
 function excludesEnvFiles(content: string): boolean {

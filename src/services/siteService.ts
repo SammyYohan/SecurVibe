@@ -2,6 +2,7 @@ import "server-only";
 
 import { connect as tlsConnect } from "node:tls";
 import { isAbortError } from "@/lib/sleep";
+import { safeFetch } from "@/lib/ssrf";
 import type {
   ProgressRange,
   ScanEvent,
@@ -51,40 +52,43 @@ export async function* runProductionAudit(
 
     // ---- Étape 1: accessibilité HTTPS ------------------------------------
     yield { type: "test_step", step: buildStep(1, "RUNNING") };
-    const response = await fetchUrl(input.productionUrl, signal);
-    const reachable = response.kind === "reachable";
+    const probe = await safeFetch(input.productionUrl, signal);
+    const response = probe.kind === "reachable" ? probe.response : null;
     yield {
       type: "test_step",
       step: {
-        ...buildStep(1, reachable ? "SUCCESS" : "FAILED"),
-        detail: reachable
-          ? `HTTP ${response.status} received from ${hostname}`
-          : response.detail,
+        ...buildStep(1, response !== null ? "SUCCESS" : "FAILED"),
+        detail:
+          probe.kind === "reachable"
+            ? `HTTP ${probe.response.status} received from ${hostname}`
+            : probe.detail,
       },
     };
     yield { type: "progress", value: interpolate(range, 1, 4) };
 
     // ---- Étape 2: redirection HTTP → HTTPS ---------------------------------
     yield { type: "test_step", step: buildStep(2, "RUNNING") };
-    const httpProbe = await fetchUrl(`http://${hostname}`, signal);
-    const redirectOk =
-      httpProbe.kind === "reachable" &&
-      httpProbe.redirectedTo !== null &&
-      httpProbe.redirectedTo.startsWith("https://");
+    const httpProbe = await safeFetch(`http://${hostname}`, signal);
+    const redirectTarget =
+      httpProbe.kind === "reachable" ? httpProbe.response.redirectedTo : null;
     yield {
       type: "test_step",
       step: {
-        ...buildStep(2, redirectOk ? "SUCCESS" : "FAILED"),
-        detail: redirectOk
-          ? `HTTP traffic redirected to ${httpProbe.redirectedTo}`
-          : "Plain HTTP requests are not redirected to HTTPS automatically.",
+        ...buildStep(2, redirectTarget !== null ? "SUCCESS" : "FAILED"),
+        detail:
+          redirectTarget !== null
+            ? `HTTP traffic redirected to ${redirectTarget}`
+            : "Plain HTTP requests are not redirected to HTTPS automatically.",
       },
     };
     yield { type: "progress", value: interpolate(range, 2, 4) };
 
     // ---- Étape 3: certificat TLS --------------------------------------------
     yield { type: "test_step", step: buildStep(3, "RUNNING") };
-    const certificate = reachable ? await inspectTls(hostname, signal) : { daysLeft: null, reason: "Site unreachable: TLS not checked." };
+    const certificate =
+      response !== null
+        ? await inspectTls(hostname, signal, response.address)
+        : { daysLeft: null, reason: "Site unreachable: TLS not checked." };
     const tlsFailed = certificate.daysLeft === null || certificate.daysLeft <= 7;
     yield {
       type: "test_step",
@@ -102,7 +106,7 @@ export async function* runProductionAudit(
     yield { type: "test_step", step: buildStep(4, "RUNNING") };
     const missingHeaders: string[] = [];
     const headerHints: string[] = [];
-    if (response.kind === "reachable") {
+    if (response !== null) {
       for (const required of REQUIRED_HEADERS) {
         if (!response.headers.has(required.name)) {
           missingHeaders.push(required.name);
@@ -123,7 +127,7 @@ export async function* runProductionAudit(
     };
 
     // Constats actionnables réels (les mêmes règles de gravité que le scan).
-    if (reachable && missingHeaders.length > 0) {
+    if (response !== null && missingHeaders.length > 0) {
       yield {
         type: "finding",
         finding: {
@@ -170,36 +174,10 @@ function safeHostname(productionUrl: string): string {
   return new URL(productionUrl).hostname;
 }
 
-type FetchResult =
-  | { kind: "reachable"; status: number; headers: Headers; redirectedTo: string | null }
-  | { kind: "unreachable"; detail: string };
-
-async function fetchUrl(url: string, signal: AbortSignal): Promise<FetchResult> {
-  try {
-    const response = await fetch(url, {
-      redirect: "follow",
-      signal: AbortSignal.any([signal, AbortSignal.timeout(8_000)]),
-      cache: "no-store",
-      headers: { "User-Agent": "guardvibe-audit" },
-    });
-    return {
-      kind: "reachable",
-      status: response.status,
-      headers: response.headers,
-      redirectedTo: response.url !== url && response.url.startsWith("https://") ? response.url : null,
-    };
-  } catch (error) {
-    if (isAbortError(error)) throw error;
-    return {
-      kind: "unreachable",
-      detail: "No HTTP response (DNS, timeout or TLS error). The site may be down or the URL wrong.",
-    };
-  }
-}
-
 async function inspectTls(
   hostname: string,
   signal: AbortSignal,
+  address: string,
 ): Promise<{ daysLeft: number | null; reason: string | null }> {
   return new Promise((resolve) => {
     let socket: import("node:tls").TLSSocket | null = null;
@@ -221,9 +199,10 @@ async function inspectTls(
 
     try {
       socket = tlsConnect({
-        host: hostname,
+        // IP déjà validée : la poignée de main ne peut pas être redirigée par DNS.
+        host: address,
         port: 443,
-        servername: hostname,
+        servername: hostname.replace(/^\[|\]$/g, ""),
         rejectUnauthorized: false, // on veut inspecter, pas rejeter ici
       });
       socket.setTimeout(8_000, () => {
