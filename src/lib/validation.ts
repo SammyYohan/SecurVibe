@@ -195,6 +195,8 @@ export const scanRequestSchema = z.object({
   productionUrl: productionUrlSchema,
   /** Token GitHub optionnel fourni par l'utilisateur (sans stockage). */
   githubToken: z.string().optional(),
+  /** Clé de licence d'un plan payant (vérifiée par signature côté serveur). */
+  licenseKey: z.string().trim().max(512).optional(),
 });
 
 export type ScanRequest = z.infer<typeof scanRequestSchema>;

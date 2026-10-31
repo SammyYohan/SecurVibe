@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, LockKeyhole, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { z } from "zod";
@@ -40,6 +40,8 @@ type DashboardState = {
   steps: TestStep[];
   finalScore: number | null;
   errorMessage: string | null;
+  /** Audit de production non exécuté : plan gratuit. */
+  siteAuditLocked: boolean;
 };
 
 type ScanAction =
@@ -56,6 +58,7 @@ const INITIAL_STATE: DashboardState = {
   steps: [],
   finalScore: null,
   errorMessage: null,
+  siteAuditLocked: false,
 };
 
 const RUNNING_STATE: DashboardState = {
@@ -135,6 +138,7 @@ function reducer(state: DashboardState, action: ScanAction): DashboardState {
             status: "done",
             finalScore: event.score,
             progress: 100,
+            siteAuditLocked: event.siteAuditLocked === true,
           };
         case "error":
           return { ...state, status: "error", errorMessage: event.message };
@@ -386,6 +390,24 @@ function DashboardInner() {
           onCancel={handleCancel}
         />
       </header>
+
+      {state.siteAuditLocked ? (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-2xl bg-tint px-5 py-4 text-sm text-ink"
+        >
+          <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+          <p>
+            {t("dashboard.siteLocked")}{" "}
+            <Link
+              href={`/${locale}/pricing`}
+              className="font-semibold text-accent transition-colors hover:text-ink"
+            >
+              {t("footer.linksPricing")}
+            </Link>
+          </p>
+        </div>
+      ) : null}
 
       {state.errorMessage !== null ? (
         <div

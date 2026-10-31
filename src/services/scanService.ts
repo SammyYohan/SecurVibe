@@ -16,9 +16,15 @@ import type { Finding, ProgressRange, ScanEvent, Severity } from "@/types";
  * En cas d'annulation, le générateur se termine silencieusement.
  */
 
-export type ScanInput = { repoUrl: string; githubToken?: string };
+export type ScanInput = {
+  repoUrl: string;
+  githubToken?: string;
+  /** Plafond de fichiers du plan ; absent = plafond gratuit. */
+  maxFiles?: number;
+};
 
 const MAX_CODE_FILES = 50;
+const MAX_FILES_CEILING = 500;
 const MAX_FILE_BYTES = 64 * 1024;
 const CODE_EXTENSIONS = [
   ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".rb", ".go",
@@ -198,11 +204,16 @@ export async function* scanRepository(
     }
     const blobs = treeParsed.data.tree.filter((entry) => entry.type === "blob");
 
+    // Plafond appliqué par le serveur selon le plan vérifié (jamais par le client).
+    const fileCap = Math.min(
+      Math.max(input.maxFiles ?? MAX_CODE_FILES, 1),
+      MAX_FILES_CEILING,
+    );
     const codeFiles = blobs
       .filter((entry) => !IGNORED_PATH_RES.some((rx) => rx.test(entry.path)))
       .filter((entry) => CODE_EXTENSIONS.some((ext) => entry.path.toLowerCase().endsWith(ext)))
       .filter((entry) => entry.size === undefined || (entry.size >= 1 && entry.size <= MAX_FILE_BYTES))
-      .slice(0, MAX_CODE_FILES);
+      .slice(0, fileCap);
 
     // Les gabarits versionnés (.env.example, .env.sample…) ne sont pas des secrets.
     const envFiles = blobs.filter(

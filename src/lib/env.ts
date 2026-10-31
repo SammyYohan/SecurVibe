@@ -33,6 +33,9 @@ const stripeLinkSchema = optionalUrlSchema;
 const serverEnvSchema = z.object({
   // Token GitHub optionnel : augmente le quota de scanning serveur (60 -> 5000/h).
   GITHUB_TOKEN: optionalSecretSchema,
+  // Secret de signature des clés de licence (32 caractères minimum).
+  // Absent : toutes les clés sont refusées et le plan gratuit s'applique.
+  LICENSE_SECRET: optionalSecretSchema,
   // Liens de paiement Stripe (Payment Links) par plan — optionnels en beta.
   STRIPE_LINK_ESSENTIAL: stripeLinkSchema,
   STRIPE_LINK_PRO: stripeLinkSchema,

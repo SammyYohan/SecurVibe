@@ -68,6 +68,8 @@ export const scanEventSchema = z.discriminatedUnion("type", [
     type: z.literal("done"),
     score: z.number().int().min(0).max(100),
     mode: z.enum(["demo", "real"]),
+    /** Audit de production non exécuté : inclus à partir du plan Essential. */
+    siteAuditLocked: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("error"),

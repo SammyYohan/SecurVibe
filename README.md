@@ -11,7 +11,7 @@
 
 | Module | Ce qui est vérifié | Source de données |
 | --- | --- | --- |
-| **Scanner de dépôt** | Secrets en dur (PAT GitHub, clés Stripe/OpenAI/Slack/GitLab, AWS, PEM privés, JWT signés, identifiants génériques), ligne par ligne, 50 fichiers max | Contenu réel via `raw.githubusercontent.com` (hors quota API) |
+| **Scanner de dépôt** | Secrets en dur (PAT GitHub, clés Stripe/OpenAI/Slack/GitLab, AWS, PEM privés, JWT signés, identifiants génériques), ligne par ligne, 50 à 500 fichiers selon le plan | Contenu réel via `raw.githubusercontent.com` (hors quota API) |
 | **Dépendances** | Avis CVE/GHSA réels sur vos versions npm épinglées, dépendances non épinglées | [OSV.dev](https://osv.dev) (base publique gratuite, sans clé) |
 | **Hygiène** | `.env` commités, exclusion `.env*` dans `.gitignore`, lockfile, workflows CI, bibliothèques de hachage (bcrypt/argon2) | Arborescence + fichiers du dépôt |
 | **Audit de production** | Accessibilité HTTPS, redirection HTTP→HTTPS, certificat TLS (jours restants, handshake réel), 6 en-têtes de sécurité (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) | Requêtes HTTP + `tls.connect` vers l'URL soumise |
@@ -94,7 +94,7 @@ Coûts marginaux quasi nuls (quotas simples : GitHub raw hors API, OSV.dev gratu
 | **Essential** | 9 €/mois (90 €/an) | audits illimités, audit de production, scan 200 fichiers |
 | **Pro** | 24 €/mois | + multi-dépôts client, 500 fichiers, workspace token partagé |
 | **Team** | 79 €/mois | + 5 sièges, revue trimestrielle, facture |
-| **Pack** | 12 € | 10 audits à l'unité, 6 mois — sans abonnement |
+| **Pack** | 12 € | licence 6 mois sur un projet, audits illimités — sans abonnement |
 
 Les montants s'affichent automatiquement en EUR (fr/es/de) ou USD (autres) via `Intl.NumberFormat` ; le paiement passe par Stripe. En accès anticipé, les plans payants sont activés **manuellement sous 24 h** après paiement (aucune promesse technique non encore tenue).
 
@@ -107,10 +107,32 @@ Les montants s'affichent automatiquement en EUR (fr/es/de) ou USD (autres) via `
 Toutes les variables sont **optionnelles** (voir `.env.example`) :
 
 - `GITHUB_TOKEN` — quota serveur 60→5000 requêtes/h quand l'utilisateur ne fournit pas le sien ;
+- `LICENSE_SECRET` — secret de signature des clés de licence (32 caractères min.) ; sans lui, aucune licence n'est acceptée ;
 - `STRIPE_LINK_ESSENTIAL` / `_PRO` / `_TEAM` / `_PACK` — Payment Links ; si absents, les boutons affichent l'accès anticipé ;
 - `NEXT_PUBLIC_SITE_URL` — canonique + hreflang.
 
 **Token utilisateur** : champ dédié du dashboard, utilisé pour une seule requête, jamais persisté côté serveur ni navigateur. Utiliser un token *fine-grained* en lecture seule.
+
+### Limites réellement appliquées
+
+`src/lib/plans.ts` est la source unique : le serveur l'applique et la page de tarifs l'affiche.
+
+| Plan | Fichiers analysés | Audits | Audit de production |
+| --- | --- | --- | --- |
+| Free | 50 | 5 par jour et par IP | non |
+| Essential | 200 | illimités (garde-fou 12/min) | oui |
+| Pro / Team | 500 | illimités | oui |
+| Pack | 200 | illimités, 6 mois, un projet | oui |
+
+Sur le plan gratuit, l'audit du site n'est pas exécuté : le flux se termine par `done` avec `siteAuditLocked: true` et le dashboard affiche un lien vers les tarifs. Rien n'est simulé pour autant — le scan du dépôt reste réel.
+
+Les plans payants sont matérialisés par une **clé de licence signée** (HMAC-SHA256 avec `LICENSE_SECRET`), émise manuellement après paiement :
+
+```bash
+LICENSE_SECRET="…" node scripts/issue-license.mjs --plan pro --id ord_12345 --days 365
+```
+
+La clé se colle dans le champ « Licence » du dashboard, reste en mémoire pour la session et est vérifiée à chaque requête ; une clé invalide ou expirée est refusée (`INVALID_LICENSE`) au lieu d'être ignorée. Le pack est vendu comme une licence de 6 mois et non comme un compteur de 10 audits : décompter des crédits exigerait un stockage serveur persistant, que ce produit n'a pas.
 
 ---
 

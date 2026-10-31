@@ -158,7 +158,7 @@ export const en = {
       pack: {
         name: "Audit pack",
         label: "One-off, no subscription",
-        f1: "10 full audits, valid 6 months",
+        f1: "Unlimited audits for 6 months, one project",
         f2: "Ideal for a launch or a batch of clients",
         f3: "Same engine as subscriptions",
       },
@@ -171,6 +171,10 @@ export const en = {
     productionUrlLabel: "Production URL",
     tokenLabel: "GitHub token (optional)",
     tokenHint: "Your own token raises rate limits. Used for this request only, never stored.",
+    licenseLabel: "Licence key (paid plans, optional)",
+    licenseHint:
+      "Paid plans are activated manually: paste the key you received. The server verifies its signature before applying the plan's limits. Kept for this session only.",
+    licensePlaceholder: "gv1… (optional)",
     tokenPlaceholder: "ghp_… (optional)",
     start: "Run the audit",
     running: "Audit running…",
@@ -196,6 +200,8 @@ export const en = {
     okCount: "{count} controls",
     okSection: "Successful controls",
     siteTitle: "Production audit",
+    siteLocked:
+      "The production audit (HTTPS, TLS, security headers) is included from the Essential plan. This run checked the repository only.",
     siteEmpty: "Waiting for an audit to start.",
     siteFailedTitle: "Check failed.",
     bannerDemo: "Early access · no accounts",

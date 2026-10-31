@@ -1,8 +1,10 @@
 import { isAbortError } from "@/lib/sleep";
 import { getServerEnv } from "@/lib/env";
+import { verifyLicense } from "@/lib/license";
+import { PLAN_LIMITS, type PlanId } from "@/lib/plans";
 import { computeScore } from "@/lib/score";
 import { scanRequestSchema } from "@/lib/validation";
-import { pruneRateLimitBuckets, rateLimit } from "@/lib/rateLimit";
+import { consumeDailyAudit, pruneRateLimitBuckets, rateLimit } from "@/lib/rateLimit";
 import { runProductionAudit } from "@/services/siteService";
 import { scanRepository } from "@/services/scanService";
 import type {
@@ -43,6 +45,18 @@ export async function POST(request: Request): Promise<Response> {
       return respond400("INVALID_REQUEST", "Invalid request: provide a GitHub repository URL and a production URL.");
     }
 
+    // Licence : vérifiée par signature côté serveur. Une clé invalide est
+    // refusée explicitement plutôt que rétrogradée en silence.
+    const claims = tokens.licenseKey === undefined ? null : verifyLicense(tokens.licenseKey);
+    if (tokens.licenseKey !== undefined && claims === null) {
+      return respond400(
+        "INVALID_LICENSE",
+        "This licence key is invalid or expired. Check the key received after payment.",
+      );
+    }
+    const plan: PlanId = claims?.plan ?? "free";
+    const limits = PLAN_LIMITS[plan];
+
     // Protection anti-abus (mémoire locale, par IP).
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
     const limit = rateLimit(ip);
@@ -53,6 +67,28 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
     if (Math.random() < 0.05) pruneRateLimitBuckets();
+
+    // Quota journalier du plan gratuit : une licence payante n'y est pas soumise.
+    if (limits.auditsPerDay !== null) {
+      const daily = consumeDailyAudit(ip, limits.auditsPerDay);
+      if (daily.ok === false) {
+        return Response.json(
+          {
+            error: {
+              code: "RATE_LIMITED",
+              message: `Free plan limit reached (${limits.auditsPerDay} audits per day). A licence lifts this cap.`,
+            },
+          },
+          {
+            status: 429,
+            headers: {
+              "Cache-Control": "no-store",
+              "Retry-After": String(Math.ceil(daily.retryAfterMs / 1000)),
+            },
+          },
+        );
+      }
+    }
 
     // Un seul contrôleur d'annulation: requête client + cancel() du flux.
     startedController = new AbortController();
@@ -95,7 +131,11 @@ export async function POST(request: Request): Promise<Response> {
           let scanError: ScanErrorEvent | null = null;
 
           for await (const event of scanRepository(
-            { repoUrl: tokens.repoUrl, githubToken: tokens.githubToken },
+            {
+              repoUrl: tokens.repoUrl,
+              githubToken: tokens.githubToken,
+              maxFiles: limits.files,
+            },
             SCAN_RANGE,
             activeController.signal,
           )) {
@@ -116,8 +156,19 @@ export async function POST(request: Request): Promise<Response> {
           }
 
 
-          // Audit de production (réel) — exécuté uniquement si la connexion tient.
+          // Audit de production (réel) — inclus à partir du plan Essential,
+          // et exécuté uniquement si la connexion tient.
           if (!activeController.signal.aborted) {
+            if (limits.productionAudit === false) {
+              send({
+                type: "done",
+                score: computeScore(findings, false),
+                mode: "real",
+                siteAuditLocked: true,
+              });
+              return;
+            }
+
             let journeyFailed = false;
             for await (const event of runProductionAudit(
               { productionUrl: tokens.productionUrl },
@@ -184,6 +235,7 @@ function parseScanRequest(body: unknown): {
   repoUrl: string;
   productionUrl: string;
   githubToken: string | undefined;
+  licenseKey: string | undefined;
 } | null {
   const parsed = scanRequestSchema.safeParse(body);
   if (!parsed.success) return null;
@@ -192,6 +244,7 @@ function parseScanRequest(body: unknown): {
     repoUrl: parsed.data.repoUrl,
     productionUrl: parsed.data.productionUrl,
     githubToken: parsed.data.githubToken,
+    licenseKey: parsed.data.licenseKey,
   };
 }
 

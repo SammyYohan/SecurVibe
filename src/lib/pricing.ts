@@ -1,4 +1,6 @@
-export type PlanId = "free" | "essential" | "pro" | "team" | "pack";
+import type { PlanId } from "@/lib/plans";
+
+export type { PlanId };
 
 export type PlanPrice = {
   /** Prix mensuel de référence (USD/EUR identiques à la source). */
