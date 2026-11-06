@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, LockKeyhole, RefreshCw } from "lucide-react";
+import { AlertTriangle, Heart, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { z } from "zod";
@@ -40,8 +40,6 @@ type DashboardState = {
   steps: TestStep[];
   finalScore: number | null;
   errorMessage: string | null;
-  /** Audit de production non exécuté : plan gratuit. */
-  siteAuditLocked: boolean;
 };
 
 type ScanAction =
@@ -58,7 +56,6 @@ const INITIAL_STATE: DashboardState = {
   steps: [],
   finalScore: null,
   errorMessage: null,
-  siteAuditLocked: false,
 };
 
 const RUNNING_STATE: DashboardState = {
@@ -138,7 +135,6 @@ function reducer(state: DashboardState, action: ScanAction): DashboardState {
             status: "done",
             finalScore: event.score,
             progress: 100,
-            siteAuditLocked: event.siteAuditLocked === true,
           };
         case "error":
           return { ...state, status: "error", errorMessage: event.message };
@@ -391,19 +387,19 @@ function DashboardInner() {
         />
       </header>
 
-      {state.siteAuditLocked ? (
+      {state.status === "done" ? (
         <div
           role="status"
           className="flex items-start gap-3 rounded-2xl bg-tint px-5 py-4 text-sm text-ink"
         >
-          <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+          <Heart className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
           <p>
-            {t("dashboard.siteLocked")}{" "}
+            {t("dashboard.supportText")}{" "}
             <Link
-              href={`/${locale}/pricing`}
+              href={`/${locale}/support`}
               className="font-semibold text-accent transition-colors hover:text-ink"
             >
-              {t("footer.linksPricing")}
+              {t("dashboard.supportCta")}
             </Link>
           </p>
         </div>
@@ -455,8 +451,8 @@ function DashboardInner() {
         <Link href={`/${locale}/legal`} className="font-medium transition-colors hover:text-ink">
           {t("footer.linksLegal")}
         </Link>
-        <Link href={`/${locale}/pricing`} className="font-medium transition-colors hover:text-ink">
-          {t("footer.linksPricing")}
+        <Link href={`/${locale}/support`} className="font-medium transition-colors hover:text-ink">
+          {t("footer.linksSupport")}
         </Link>
       </footer>
     </div>

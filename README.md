@@ -1,6 +1,6 @@
 # GuardVibe
 
-**Audits de sécurité réels pour les SaaS créés avec l'IA** — scanner GitHub + audit de production, en ≈ 60 secondes, sans compte.
+**Audits de sécurité réels pour les SaaS créés avec l'IA** — scanner GitHub + audit de production, en ≈ 60 secondes, 100 % gratuit, sans compte.
 
 > 🌍 Interface disponible en 8 langues : English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).
 > Les rapports d'audit (constats, correctifs) sont rédigés en anglais — standard des outils de sécurité — et s'affichent dans tous les environnements linguistiques.
@@ -11,12 +11,12 @@
 
 | Module | Ce qui est vérifié | Source de données |
 | --- | --- | --- |
-| **Scanner de dépôt** | Secrets en dur (PAT GitHub, clés Stripe/OpenAI/Slack/GitLab, AWS, PEM privés, JWT signés, identifiants génériques), ligne par ligne, 50 à 500 fichiers selon le plan | Contenu réel via `raw.githubusercontent.com` (hors quota API) |
-| **Dépendances** | Avis CVE/GHSA réels sur vos versions npm épinglées, dépendances non épinglées | [OSV.dev](https://osv.dev) (base publique gratuite, sans clé) |
+| **Scanner de dépôt** | Secrets en dur (PAT GitHub, clés Stripe/OpenAI/Anthropic/Slack/GitLab, AWS, PEM privés, JWT signés, URLs de base de données), priorisation par risque, jusqu'à 200 fichiers | Contenu réel via `raw.githubusercontent.com` + repli API GitHub |
+| **Dépendances** | Avis CVE/GHSA réels avec niveau de gravité (OSV.dev) à partir des versions exactes résolues dans le lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) | [OSV.dev](https://osv.dev) (base publique gratuite, sans clé) |
 | **Hygiène** | `.env` commités, exclusion `.env*` dans `.gitignore`, lockfile, workflows CI, bibliothèques de hachage (bcrypt/argon2) | Arborescence + fichiers du dépôt |
 | **Audit de production** | Accessibilité HTTPS, redirection HTTP→HTTPS, certificat TLS (jours restants, handshake réel), 6 en-têtes de sécurité (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) | Requêtes HTTP + `tls.connect` vers l'URL soumise |
 
-**Score** : `100 − 15 × critiques − 5 × avertissements − 10 × (échec de l'étape décisive de l'audit de production)`. Chaque constat embarque une explication et un correctif copier-collable.
+**Score** : `100 − 15 × critiques − 5 × avertissements − 10 × (échec de l'étape décisive de l'audit de production)`. Un constat critique plafonne le score à 79. Chaque constat embarque une explication et un correctif copier-collable.
 
 ### Boucle de correction (100 % côté navigateur)
 
@@ -31,10 +31,11 @@
 > 🎨 Le système de design (palette, typographie, composants) est documenté dans [`DESIGN.md`](./DESIGN.md).
 
 - **Next.js 16** (App Router, RSC), **React 19**, **TypeScript strict**
-- **Tailwind CSS v4**, lucide-react, composants UI maison (shadcn-style)
+- **Tailwind CSS v4**, lucide-react, composants UI maison (sans bibliothèque externe lourde)
 - **zod** pour tous les contrats (schémas partagés client/serveur)
 - Streaming **NDJSON** avec annulation propagée (`AbortSignal`/`AbortSignal.any`)
 - Aucune base de données, aucun compte, aucun stockage serveur
+- Quotas gérés via **Upstash Redis** (API REST stateless) avec repli mémoire automatique
 - pnpm uniquement (Node ≥ 20.9)
 
 ```bash
@@ -55,50 +56,55 @@ src/
 │   ├── [locale]/
 │   │   ├── layout.tsx          ← layout racine (lang/dir RTL, SEO hreflang)
 │   │   ├── page.tsx            ← landing (hero, bénéfices, comparatif, FAQ)
-│   │   ├── pricing/page.tsx    ← tarification (4 plans + pack à l'unité)
+│   │   ├── support/page.tsx    ← soutien au projet (dons Ko-fi / PayPal & quotas)
+│   │   ├── pricing/page.tsx    ← redirection permanente vers /support
 │   │   ├── legal/page.tsx      ← CGU & confidentialité
 │   │   ├── app/page.tsx        ← dashboard (scanner)
 │   │   ├── error.tsx           ← frontière d'erreur localisée
 │   │   └── not-found.tsx
-│   ├── api/scan/route.ts       ← POST streaming NDJSON (réel)
+│   ├── api/scan/route.ts       ← POST streaming NDJSON (réel, quotas, slots)
 │   └── globals.css
 ├── components/
-│   ├── dashboard/              ← Dashboard, ScanForm (+ token), ScanStatus,
+│   ├── dashboard/              ← Dashboard, ScanForm (+ sample), ScanStatus,
 │   │                             SecurityReport, SiteAuditPanel
-│   ├── site/                   ← LocaleSwitcher, SiteFooter
-│   └── ui/                     ← primitives maison
+│   ├── site/                   ← LocaleSwitcher, SiteFooter, Logo, SectionHeading
+│   └── ui/                     ← primitives maison (Button, Badge, Card, Input...)
 ├── lib/
-│   ├── i18n/                   ← config locales, dictionnaires typés, moteur
+│   ├── i18n/                   ← config locales, 8 dictionnaires typés, moteur
 │   ├── env.ts                  ← variables serveur validées (zod)
-│   ├── validation.ts           ← schémas de requête partagés
-│   ├── score.ts                ← formule du score
-│   ├── rateLimit.ts            ← limiteur en mémoire (12 req/min/IP)
-│   └── pricing.ts              ← tarifs + liens Stripe optionnels
+│   ├── validation.ts           ← schémas de requête partagés (zod)
+│   ├── score.ts                ← formule du score (plafond à 79 en cas de critique)
+│   ├── rateLimit.ts            ← limiteur en mémoire par instance
+│   ├── quota.ts                ← quotas partagés Upstash Redis + repli mémoire
+│   ├── lockfile.ts             ← résolveur de versions npm, pnpm et yarn lock
+│   ├── secrets.ts              ← règles de détection de secrets & conseils
+│   ├── ssrf.ts                 ← validation d'URL anti-SSRF (DNS, IPs privées)
+│   └── plans.ts                ← constantes de quotas et limites d'audit
 ├── services/
 │   ├── scanService.ts          ← scanner dépôt (GitHub raw + règles + OSV.dev)
 │   ├── siteService.ts          ← audit production (HTTPS, TLS, headers)
-│   └── vulnClient.ts           ← client OSV.dev (batch)
+│   └── vulnClient.ts           ← client OSV.dev (batch + sévérité)
 ├── types/index.ts              ← contrats zod (ScanEvent, Finding, TestStep…)
-└── middleware.ts               ← redirection negociée par Accept-Language
+└── proxy.ts                    ← redirection négociée par Accept-Language (Next 16)
 ```
 
 ---
 
-## Tarification & modèle économique
+## Modèle économique & Quotas d'usage loyal
 
-Coûts marginaux quasi nuls (quotas simples : GitHub raw hors API, OSV.dev gratuit, vérifications HTTP locales) → marges élevées dès le premier client.
+GuardVibe est **100 % gratuit, sans inscription et sans publicité**.
 
-| Plan | Prix | Contenu |
+Le maintien du service est soutenu par des **dons volontaires** (Ko-fi, PayPal). Des quotas d'usage loyal protègent l'infrastructure et garantissent la disponibilité pour tous :
+
+| Quota | Limite | Description |
 | --- | --- | --- |
-| **Free** | 0 € | Audits en usage raisonnable (accès anticipé), contrôles de base, sans carte |
-| **Essential** | 9 €/mois (90 €/an) | audits illimités, audit de production, scan 200 fichiers |
-| **Pro** | 24 €/mois | + multi-dépôts client, 500 fichiers, workspace token partagé |
-| **Team** | 79 €/mois | + 5 sièges, revue trimestrielle, facture |
-| **Pack** | 12 € | licence 6 mois sur un projet, audits illimités — sans abonnement |
+| **Par minute** | 6 audits | Fenêtre glissante par IP (anti-rafales) |
+| **Par jour** | 30 audits | Par IP et par tranche UTC de 24 h |
+| **Plafond global** | 1 000 audits | Par jour pour l'ensemble du service |
+| **Concurrence** | 3 simultanés | Par instance de serveur (garde-fou mémoire/CPU) |
+| **Profondeur** | 200 fichiers | Par audit de dépôt GitHub |
 
-Les montants s'affichent automatiquement en EUR (fr/es/de) ou USD (autres) via `Intl.NumberFormat` ; le paiement passe par Stripe. En accès anticipé, les plans payants sont activés **manuellement sous 24 h** après paiement (aucune promesse technique non encore tenue).
-
-**Différenciation concurrentielle** : sans compte → premier rapport en 60 s ; vos données ne sont ni comptées ni stockées ; token utilisateur optionnel (votre quota, vos permissions) ; pack à l'unité unique contre un marché à abonnement ; 8 langues dont l'arabe RTL ; correctifs exploitables par constat.
+Les quotas sont vérifiés via Upstash Redis (API REST pipeline) et basculent automatiquement en mémoire locale si le store est indisponible (principe « fail-open »).
 
 ---
 
@@ -107,72 +113,27 @@ Les montants s'affichent automatiquement en EUR (fr/es/de) ou USD (autres) via `
 Toutes les variables sont **optionnelles** (voir `.env.example`) :
 
 - `GITHUB_TOKEN` — quota serveur 60→5000 requêtes/h quand l'utilisateur ne fournit pas le sien ;
-- `LICENSE_SECRET` — secret de signature des clés de licence (32 caractères min.) ; sans lui, aucune licence n'est acceptée ;
-- `STRIPE_LINK_ESSENTIAL` / `_PRO` / `_TEAM` / `_PACK` — Payment Links ; si absents, les boutons affichent l'accès anticipé ;
-- `NEXT_PUBLIC_SITE_URL` — canonique + hreflang.
+- `UPSTASH_REDIS_REST_URL` & `UPSTASH_REDIS_REST_TOKEN` — store partagé des quotas (Upstash) ;
+- `NEXT_PUBLIC_KOFI_URL` & `NEXT_PUBLIC_PAYPAL_URL` — liens de dons pour la page `/support` ;
+- `NEXT_PUBLIC_SITE_URL` — URL canonique + hreflang ;
+- `CONTACT_EMAIL` — adresse de contact affichée sur la page légale.
 
-**Token utilisateur** : champ dédié du dashboard, utilisé pour une seule requête, jamais persisté côté serveur ni navigateur. Utiliser un token *fine-grained* en lecture seule.
-
-### Limites réellement appliquées
-
-`src/lib/plans.ts` est la source unique : le serveur l'applique et la page de tarifs l'affiche.
-
-| Plan | Fichiers analysés | Audits | Audit de production |
-| --- | --- | --- | --- |
-| Free | 50 | 5 par jour et par IP | non |
-| Essential | 200 | illimités (garde-fou 12/min) | oui |
-| Pro / Team | 500 | illimités | oui |
-| Pack | 200 | illimités, 6 mois, un projet | oui |
-
-Sur le plan gratuit, l'audit du site n'est pas exécuté : le flux se termine par `done` avec `siteAuditLocked: true` et le dashboard affiche un lien vers les tarifs. Rien n'est simulé pour autant — le scan du dépôt reste réel.
-
-Les plans payants sont matérialisés par une **clé de licence signée** (HMAC-SHA256 avec `LICENSE_SECRET`), émise manuellement après paiement :
-
-```bash
-LICENSE_SECRET="…" node scripts/issue-license.mjs --plan pro --id ord_12345 --days 365
-```
-
-La clé se colle dans le champ « Licence » du dashboard, reste en mémoire pour la session et est vérifiée à chaque requête ; une clé invalide ou expirée est refusée (`INVALID_LICENSE`) au lieu d'être ignorée. Le pack est vendu comme une licence de 6 mois et non comme un compteur de 10 audits : décompter des crédits exigerait un stockage serveur persistant, que ce produit n'a pas.
+**Token utilisateur** : champ optionnel dans le formulaire de scan, transmis pour la requête courante uniquement, jamais stocké côté serveur ni client.
 
 ---
 
-## Sécurité du produit lui-même
+## Sécurité du produit
 
-- Validation stricte **avant** tout streaming (400 JSON sans fuite) ; aucune stack trace au client.
-- Toutes les variables d'environnement lues via schéma zod ; secrets jamais en `NEXT_PUBLIC_`.
-- Limiteur en mémoire (12 audits/min/IP) + protection par la forme stricte des URL.
-- Le SHA du contenu est lu sur `raw.githubusercontent.com` — ni exécution, ni `eval`, ni échantillonnage des données scannées.
-- Vérifiables : `curl -X GET /api/scan` → **405** ; JSON invalide → **400** ; coupure du flux pendant le scan → **0 événement d'erreur** côté serveur (testé).
-
----
-
-## Recettes de test
-
-```bash
-# Scan réel (repo public expressjs/express + exemple.com)
-curl -sN -X POST http://localhost:3000/api/scan \
-  -H "Content-Type: application/json" \
-  -d '{"repoUrl":"https://github.com/expressjs/express","productionUrl":"https://example.com"}'
-
-# Repo inexistant → {"type":"error","code":"REPO_NOT_FOUND",…}
-# Exactitude linguistique : /fr /de /ja /zh-cn /ar → 200, /fr/pricing → 200
-```
-
-Redirection par `Accept-Language` middleware : `/` + `Accept-Language: fr-CA` → **307 → `/fr`**.
+- Protection **anti-SSRF stricte** (`ssrf.ts`) : vérification des résolutions DNS, blocage des plages privées (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, link-local, multicast, cloud metadata IPv4/IPv6).
+- Validation stricte **avant** tout streaming (JSON 400 sans fuite de stack trace).
+- Toutes les variables d'environnement lues via schéma zod ; secrets jamais exposés via `NEXT_PUBLIC_`.
+- Limiteurs en couches (minute, jour, concurrence, global).
+- Annulation propre des flux via `AbortSignal`.
 
 ---
 
 ## Déploiement
 
-1. `pnpm build` (36 pages pré-générées statiquement — coût quasi nul en hébergement serverless type Vercel).
-2. Variables d'environnement (cf. configuration ci-dessus).
-3. Stripe : créer 4 Payment Links → remplir `STRIPE_LINK_*`.
-4. Tout le reste est déjà en place : i18n, SEO (hreflang + canonique), limites, streaming.
-
----
-
-## Contrats techniques
-
-- `ScanEvent` (NDJSON) : `scan_started {totalFiles}` · `progress {value}` · `finding {finding}` · `test_step {step}` · `done {score, mode:"real"}` · `error {code, message}`.
-- Codes d'erreur d'événement : `INVALID_URL`, `REPO_NOT_FOUND`, `INTERNAL_ERROR`. Le 429 (limiteur) utilise `{"error":{"code":"RATE_LIMITED",…}}`.
-- Étape 4 (en-têtes HTTP) a modestement mission d'étape décisive : ≥ 3 en-têtes manquants ⇒ `FAILED` ⇒ −10 au score.
+1. `pnpm build` (pages pré-générées statiquement pour les 8 langues).
+2. Renseigner les variables d'environnement optionnelles sur votre hébergeur (Vercel, Node, etc.).
+3. Tout est prêt : i18n, SEO (hreflang + canonique), anti-SSRF, streaming NDJSON.

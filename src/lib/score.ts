@@ -4,6 +4,12 @@ const CRITICAL_PENALTY = 15;
 const WARNING_PENALTY = 5;
 const JOURNEY_FAILURE_PENALTY = 10;
 
+/**
+ * Un seul constat critique interdit le palier « bon » (80+).
+ * Une clé live ne doit pas s'afficher comme un dépôt sain.
+ */
+export const CRITICAL_SCORE_CAP = 79;
+
 /** Fonction pure : utilisée côté serveur (événement "done") et côté client (score provisoire). */
 export function computeScore(
   findings: readonly Finding[],
@@ -17,7 +23,9 @@ export function computeScore(
     WARNING_PENALTY * warningCount +
     (journeyFailed ? JOURNEY_FAILURE_PENALTY : 0);
 
-  return Math.max(0, 100 - penalty);
+  const score = Math.max(0, 100 - penalty);
+  if (criticalCount > 0) return Math.min(score, CRITICAL_SCORE_CAP);
+  return score;
 }
 
 export type ScoreTier = "good" | "medium" | "bad";

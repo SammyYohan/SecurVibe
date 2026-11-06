@@ -1,9 +1,10 @@
 import "server-only";
 
 /**
- * Limiteur de requêtes en mémoire (par instance).
- * Protège l'endpoint public des abus ; suffisant pour une instance unique.
- * Les plans payants profitent d'un quota plus élevé (dépassé: HTTP 429).
+ * Limiteurs en mémoire (par instance, fenêtres glissantes).
+ * Premier rideau anti-abus : instantanés, sans dépendance, valables même à
+ * un seul utilisateur. À déployer multi-instance ou serverless, ils sont
+ * complétés par le store partagé de `quota.ts` (Upstash Redis).
  */
 type Bucket = { count: number; resetAt: number };
 

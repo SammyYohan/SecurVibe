@@ -1,10 +1,14 @@
 import { isAbortError } from "@/lib/sleep";
 import { getServerEnv } from "@/lib/env";
-import { verifyLicense } from "@/lib/license";
-import { PLAN_LIMITS, type PlanId } from "@/lib/plans";
+import {
+  acquireAuditSlot,
+  checkDailyQuota,
+  releaseAuditSlot,
+} from "@/lib/quota";
+import { AUDITS_PER_DAY, MAX_AUDIT_FILES } from "@/lib/plans";
 import { computeScore } from "@/lib/score";
 import { scanRequestSchema } from "@/lib/validation";
-import { consumeDailyAudit, pruneRateLimitBuckets, rateLimit } from "@/lib/rateLimit";
+import { pruneRateLimitBuckets } from "@/lib/rateLimit";
 import { runProductionAudit } from "@/services/siteService";
 import { scanRepository } from "@/services/scanService";
 import type {
@@ -17,9 +21,9 @@ import type {
 export const runtime = "nodejs";
 
 /**
- * Vercel : un audit enchaîne jusqu'à 50 lectures GitHub puis 4 contrôles
- * HTTP/TLS. Sans cette valeur, la durée par défaut peut couper le flux
- * avant l'événement final "done".
+ * Vercel : un audit enchaîne jusqu'à 200 lectures GitHub puis 4 contrôles
+ * HTTP/TLS. Sur le plan Hobby, 60 s est le maximum par fonction : sans cette
+ * valeur, la durée par défaut peut couper le flux avant l'événement "done".
  */
 export const maxDuration = 60;
 
@@ -37,58 +41,61 @@ const STREAM_HEADERS: Record<string, string> = {
   "X-Accel-Buffering": "no",
 };
 
+const TOO_MANY_REQUESTS_HEADERS: Record<string, string> = {
+  "Cache-Control": "no-store",
+};
+
 export async function POST(request: Request): Promise<Response> {
   let startedController: AbortController | undefined;
   try {
     const tokens = parseScanRequest(await request.json().catch(() => null));
     if (tokens === null) {
-      return respond400("INVALID_REQUEST", "Invalid request: provide a GitHub repository URL and a production URL.");
+      return respond400("INVALID_REQUEST", "Invalid request: provide a GitHub repository URL.");
     }
 
-    // Licence : vérifiée par signature côté serveur. Une clé invalide est
-    // refusée explicitement plutôt que rétrogradée en silence.
-    const claims = tokens.licenseKey === undefined ? null : verifyLicense(tokens.licenseKey);
-    if (tokens.licenseKey !== undefined && claims === null) {
-      return respond400(
-        "INVALID_LICENSE",
-        "This licence key is invalid or expired. Check the key received after payment.",
-      );
-    }
-    const plan: PlanId = claims?.plan ?? "free";
-    const limits = PLAN_LIMITS[plan];
-
-    // Protection anti-abus (mémoire locale, par IP).
+    // Quota d'usage gratuit : fenêtre minute + plafond journalier par IP
+    // + plafond global journalier (store partagé Upstash, repli mémoire).
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
-    const limit = rateLimit(ip);
-    if (limit.ok === false) {
+    const quota = await checkDailyQuota(ip);
+    if (quota.ok === false) {
+      const message =
+        quota.reason === "minute"
+          ? "Too many audits in a short time. Wait a minute and retry."
+          : quota.reason === "daily"
+            ? `Daily audit limit reached for this network (${AUDITS_PER_DAY} per day). It resets at midnight UTC.`
+            : "The free daily capacity of GuardVibe is currently used up. Come back in a few hours.";
       return Response.json(
-        { error: { code: "RATE_LIMITED", message: "Too many audits in a short time. Wait a minute and retry." } },
-        { status: 429, headers: { "Cache-Control": "no-store" } },
+        { error: { code: "RATE_LIMITED", message } },
+        {
+          status: 429,
+          headers: {
+            ...TOO_MANY_REQUESTS_HEADERS,
+            "Retry-After": String(quota.retryAfterSeconds),
+          },
+        },
       );
     }
     if (Math.random() < 0.05) pruneRateLimitBuckets();
 
-    // Quota journalier du plan gratuit : une licence payante n'y est pas soumise.
-    if (limits.auditsPerDay !== null) {
-      const daily = consumeDailyAudit(ip, limits.auditsPerDay);
-      if (daily.ok === false) {
-        return Response.json(
-          {
-            error: {
-              code: "RATE_LIMITED",
-              message: `Free plan limit reached (${limits.auditsPerDay} audits per day). A licence lifts this cap.`,
-            },
+    // Garde-fou de concurrence par instance : le service ne peut pas être
+    // saturé par un pic (chaque audit tient le flux ~30 à 60 s).
+    if (acquireAuditSlot() === false) {
+      return Response.json(
+        {
+          error: {
+            code: "RATE_LIMITED",
+            message: "The audit queue is momentarily full. Retry in a few seconds.",
           },
-          {
-            status: 429,
-            headers: {
-              "Cache-Control": "no-store",
-              "Retry-After": String(Math.ceil(daily.retryAfterMs / 1000)),
-            },
-          },
-        );
-      }
+        },
+        { status: 429, headers: TOO_MANY_REQUESTS_HEADERS },
+      );
     }
+    let slotReleased = false;
+    const releaseSlot = (): void => {
+      if (slotReleased) return;
+      slotReleased = true;
+      releaseAuditSlot();
+    };
 
     // Un seul contrôleur d'annulation: requête client + cancel() du flux.
     startedController = new AbortController();
@@ -134,7 +141,7 @@ export async function POST(request: Request): Promise<Response> {
             {
               repoUrl: tokens.repoUrl,
               githubToken: tokens.githubToken,
-              maxFiles: limits.files,
+              maxFiles: MAX_AUDIT_FILES,
             },
             SCAN_RANGE,
             activeController.signal,
@@ -155,21 +162,10 @@ export async function POST(request: Request): Promise<Response> {
             return; // pas d'audit site si le scan échoue
           }
 
-
-          // Audit de production (réel) — inclus à partir du plan Essential,
-          // et exécuté uniquement si la connexion tient.
-          if (!activeController.signal.aborted) {
-            if (limits.productionAudit === false) {
-              send({
-                type: "done",
-                score: computeScore(findings, false),
-                mode: "real",
-                siteAuditLocked: true,
-              });
-              return;
-            }
-
-            let journeyFailed = false;
+          // Audit de production (réel) — inclus pour tout le monde, exécuté
+          // uniquement si l'URL est fournie et si la connexion tient.
+          let journeyFailed = false;
+          if (tokens.productionUrl !== undefined && !activeController.signal.aborted) {
             for await (const event of runProductionAudit(
               { productionUrl: tokens.productionUrl },
               SITE_RANGE,
@@ -191,13 +187,13 @@ export async function POST(request: Request): Promise<Response> {
               }
               send(event);
             }
-
-            send({
-              type: "done",
-              score: computeScore(findings, journeyFailed),
-              mode: "real",
-            });
           }
+
+          send({
+            type: "done",
+            score: computeScore(findings, journeyFailed),
+            mode: "real",
+          });
         } catch (error) {
           if (!isAbortError(error)) {
             console.error(
@@ -209,10 +205,12 @@ export async function POST(request: Request): Promise<Response> {
           // Annulation: fermeture silencieuse, sans événement d'erreur.
         } finally {
           request.signal.removeEventListener("abort", onClientAbort);
+          releaseSlot();
           closeStream();
         }
       },
       cancel(): void {
+        releaseSlot();
         startedController?.abort();
       },
     });
@@ -233,9 +231,8 @@ export async function POST(request: Request): Promise<Response> {
 
 function parseScanRequest(body: unknown): {
   repoUrl: string;
-  productionUrl: string;
+  productionUrl: string | undefined;
   githubToken: string | undefined;
-  licenseKey: string | undefined;
 } | null {
   const parsed = scanRequestSchema.safeParse(body);
   if (!parsed.success) return null;
@@ -244,7 +241,6 @@ function parseScanRequest(body: unknown): {
     repoUrl: parsed.data.repoUrl,
     productionUrl: parsed.data.productionUrl,
     githubToken: parsed.data.githubToken,
-    licenseKey: parsed.data.licenseKey,
   };
 }
 

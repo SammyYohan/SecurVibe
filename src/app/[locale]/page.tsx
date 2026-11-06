@@ -80,7 +80,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
 
         <nav className="hidden items-center gap-8 md:flex" aria-label={t("nav.app")}>
           <a className={NAV_LINK} href="#features">{t("nav.features")}</a>
-          <Link className={NAV_LINK} href={`${base}/pricing`}>{t("nav.pricing")}</Link>
+          <Link className={NAV_LINK} href={`${base}/support`}>{t("nav.support")}</Link>
           <a className={NAV_LINK} href="#faq">{t("nav.faq")}</a>
         </nav>
 
@@ -109,7 +109,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
             <Link href={`${base}/app`} className={buttonVariants({ size: "lg" })}>
               {t("hero.ctaPrimary")}
             </Link>
-            <Link href={`${base}/pricing`} className={buttonVariants({ size: "lg", variant: "outline" })}>
+            <Link href={`${base}/support`} className={buttonVariants({ size: "lg", variant: "outline" })}>
               {t("hero.ctaSecondary")}
             </Link>
           </div>

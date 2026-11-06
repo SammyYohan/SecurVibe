@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Loader2, Play, Square, Ticket } from "lucide-react";
+import { KeyRound, Loader2, Play, Sparkles, Square } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,16 @@ type FieldErrors = {
 
 const EMPTY_ERRORS: FieldErrors = { repoUrl: null, productionUrl: null };
 
+const SAMPLE = {
+  repoUrl: "https://github.com/expressjs/express",
+  productionUrl: "https://example.com",
+};
+
 export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
   const { t } = useI18n();
   const [repoUrl, setRepoUrl] = useState("");
   const [productionUrl, setProductionUrl] = useState("");
   const [githubToken, setGithubToken] = useState("");
-  const [licenseKey, setLicenseKey] = useState("");
   const [errors, setErrors] = useState<FieldErrors>(EMPTY_ERRORS);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -38,7 +42,6 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
       repoUrl: repoUrl.trim(),
       productionUrl: productionUrl.trim(),
       githubToken: githubToken.trim() === "" ? undefined : githubToken.trim(),
-      licenseKey: licenseKey.trim() === "" ? undefined : licenseKey.trim(),
     });
 
     if (!parsed.success) {
@@ -60,8 +63,13 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
       repoUrl: parsed.data.repoUrl,
       productionUrl: parsed.data.productionUrl,
       githubToken: parsed.data.githubToken,
-      licenseKey: parsed.data.licenseKey,
     });
+  };
+
+  const handleTrySample = (): void => {
+    setRepoUrl(SAMPLE.repoUrl);
+    setProductionUrl(SAMPLE.productionUrl);
+    setErrors(EMPTY_ERRORS);
   };
 
   return (
@@ -156,31 +164,6 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 md:col-span-2">
-        <label
-          htmlFor="license-key"
-          className="flex items-center gap-1.5 text-sm font-semibold"
-        >
-          <Ticket className="h-3.5 w-3.5 text-faint" aria-hidden="true" />
-          {t("dashboard.licenseLabel")}
-        </label>
-        <Input
-          id="license-key"
-          name="licenseKey"
-          value={licenseKey}
-          onChange={(event) => setLicenseKey(event.target.value)}
-          placeholder={t("dashboard.licensePlaceholder")}
-          autoComplete="off"
-          spellCheck={false}
-          disabled={isRunning}
-          aria-describedby="license-key-hint"
-          className="font-mono text-[13px]"
-        />
-        <p id="license-key-hint" className="text-sm leading-relaxed text-mute">
-          {t("dashboard.licenseHint")}
-        </p>
-      </div>
-
       <div className="flex flex-wrap items-center gap-3 md:pt-7">
         <Button type="submit" disabled={isRunning}>
           {isRunning ? (
@@ -189,6 +172,15 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
             <Play className="h-4 w-4" aria-hidden="true" />
           )}
           {isRunning ? t("dashboard.running") : t("dashboard.start")}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={handleTrySample}
+          disabled={isRunning}
+        >
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
+          {t("dashboard.trySample")}
         </Button>
         {isRunning ? (
           <Button type="button" variant="outline" onClick={onCancel}>

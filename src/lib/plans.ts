@@ -1,35 +1,25 @@
 /**
- * Limites des plans — source unique, partagée par le serveur (application
- * réelle) et par la page de tarifs (affichage). Toute promesse commerciale
- * doit correspondre à une valeur de ce fichier.
+ * Limites du service gratuit — source unique, partagée par le serveur
+ * (application réelle) et par la page « Soutenir » (transparence).
+ * GuardVibe est 100 % gratuit : ces quotas ne servent pas à gagner de
+ * l'argent, ils bornent le coût de chaque audit pour que le service reste
+ * stable et disponible à long terme.
  */
 
-export const PLAN_IDS = ["free", "essential", "pro", "team", "pack"] as const;
+/** Audits maximum par IP dans une fenêtre glissante de 60 s. */
+export const AUDITS_PER_MINUTE = 6;
 
-export type PlanId = (typeof PLAN_IDS)[number];
+/** Audits maximum par IP et par jour (fenêtre calendaire UTC, reset à minuit UTC). */
+export const AUDITS_PER_DAY = 30;
 
-export type PlanLimits = {
-  /** Nombre maximum de fichiers source analysés par audit. */
-  files: number;
-  /**
-   * Audits autorisés par IP et par fenêtre de 24 h.
-   * `null` = pas de plafond au-delà de la protection anti-abus (12/min).
-   */
-  auditsPerDay: number | null;
-  /** L'audit HTTP/TLS du site de production est-il inclus dans ce plan ? */
-  productionAudit: boolean;
-};
+/**
+ * Plafond global journalier, toutes IP confondues. Protège le quota GitHub
+ * du serveur (≈ 2 appels API/audit) et la capacité d'hébergement gratuite.
+ */
+export const GLOBAL_DAILY_AUDITS = 1000;
 
-export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
-  free: { files: 50, auditsPerDay: 5, productionAudit: false },
-  essential: { files: 200, auditsPerDay: null, productionAudit: true },
-  pro: { files: 500, auditsPerDay: null, productionAudit: true },
-  team: { files: 500, auditsPerDay: null, productionAudit: true },
-  // Pack : licence de 6 mois sur un projet, audits illimités (pas de compteur
-  // prépayé, qui exigerait un stockage serveur persistant).
-  pack: { files: 200, auditsPerDay: null, productionAudit: true },
-};
+/** Audits exécutés simultanément par instance (garde-fou mémoire/CPU). */
+export const MAX_CONCURRENT_AUDITS = 3;
 
-export function isPlanId(value: string): value is PlanId {
-  return (PLAN_IDS as readonly string[]).includes(value);
-}
+/** Nombre maximum de fichiers analysés par audit. */
+export const MAX_AUDIT_FILES = 200;

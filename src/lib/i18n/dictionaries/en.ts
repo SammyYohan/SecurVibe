@@ -10,7 +10,7 @@ export const en = {
   },
   nav: {
     features: "Features",
-    pricing: "Pricing",
+    support: "Support the project",
     faq: "FAQ",
     app: "Open the app",
     start: "Run a free audit",
@@ -23,7 +23,7 @@ export const en = {
     subtitle:
       "GuardVibe audits a GitHub repository and a live production URL in about a minute: hardcoded secrets, vulnerable dependencies, missing security headers, weak TLS — with a score and fixes you can act on.",
     ctaPrimary: "Run a free audit",
-    ctaSecondary: "See pricing",
+    ctaSecondary: "Support the project",
     note1: "No account required",
     note2: "Nothing is stored on our side",
     note3: "Result in ≈ 60 s",
@@ -86,12 +86,12 @@ export const en = {
     colOthers: "Traditional tools",
     r1: "First report", v1g: "≈ 60 seconds", v1o: "Setup, agents, sales calls",
     r2: "Account required", v2g: "No", v2o: "Yes",
-    r3: "Starting price", v3g: "Free, then from €9", v3o: "Often $29+ / seat / month",
-    r4: "One-off audits", v4g: "Yes — packs, no subscription", v4o: "Subscription required",
+    r3: "Starting price", v3g: "100% free, no account", v3o: "Often $29+ / seat / month",
+    r4: "Funding", v4g: "Donations — you keep the choice", v4o: "Subscription required",
     r5: "Interface languages", v5g: "8", v5o: "Usually 1–2",
     r6: "Data kept by the service", v6g: "Nothing stored server-side", v6o: "Full audit history, billing data",
     r7: "Fix guidance", v7g: "Per finding, copy-pasteable", v7o: "Varies",
-    note: "Traditional tools remain excellent for continuous enterprise security. GuardVibe is the fast, cheap first pass for AI-built products and small teams.",
+    note: "Traditional tools remain excellent for continuous enterprise security. GuardVibe is the fast, free first pass for AI-built products and small teams.",
   },
   faq: {
     kicker: "FAQ",
@@ -104,81 +104,19 @@ export const en = {
     a3: "Only what you are allowed to: your own repositories, or ones with explicit permission. Public repositories work out of the box; private ones need your own fine-grained token.",
     q4: "Why do I see a rate limit?",
     a4: "Without a token, GitHub allows anonymous reads per IP (used by everyone scanning without a token). Adding your own token in the app removes this ceiling — it also speeds up scans.",
-    q5: "How is pricing billed?",
-    a5: "Through Stripe. During early access, activations are provisioned manually within 24 h after payment; you can cancel anytime. The free tier needs no payment at all.",
-  },
-  pricing: {
-    kicker: "Pricing",
-    title: "Free to start. Pay when it saves your week.",
-    subtitle:
-      "Every plan runs the same real scanner. Paid plans add depth, priority and team features — not artificial limits.",
-    monthly: "Monthly",
-    yearly: "Yearly",
-    perMonth: "/month",
-    perYear: "/year",
-    yearlyNote: "2 months free",
-    ctaFree: "Start free",
-    ctaBeta: "Get early access",
-    ctaCheckout: "Continue to checkout",
-    betaNote: "Early access: activation is provisioned manually within 24 h after payment.",
-    currencyNote: "Prices shown in local currency; checkout is processed in EUR or USD by Stripe.",
-    plans: {
-      free: {
-        name: "Free",
-        for: "For trying it out",
-        f1: "Fair-use audits (early access)",
-        f2: "Core checks (secrets, OSV, hygiene)",
-        f3: "Score + fixes",
-        f4: "No account, no card",
-      },
-      essential: {
-        name: "Essential",
-        for: "For shipping your own SaaS",
-        f1: "Unlimited audits",
-        f2: "All checks + production site audit",
-        f3: "Deep scan (up to 200 files)",
-        f4: "Priority repair queue",
-      },
-      pro: {
-        name: "Pro",
-        for: "For agencies & indie hackers",
-        f1: "Everything in Essential",
-        f2: "Multiple repositories per client",
-        f3: "Deep scan (up to 500 files)",
-        f4: "Token shared workspace",
-      },
-      team: {
-        name: "Team",
-        for: "For teams shipping fast",
-        f1: "Everything in Pro",
-        f2: "5 seats",
-        f3: "Quarterly security review call",
-        f4: "Invoice & purchase order",
-      },
-      pack: {
-        name: "Audit pack",
-        label: "One-off, no subscription",
-        f1: "Unlimited audits for 6 months, one project",
-        f2: "Ideal for a launch or a batch of clients",
-        f3: "Same engine as subscriptions",
-      },
-    },
-    guarantee:
-      "If a paid plan does not find anything useful in your first month, write to us — we refund it.",
+    q5: "How does GuardVibe stay free?",
+    a5: "It is entirely free, sustained by voluntary donations (Ko-fi, PayPal) and fair-use quotas that keep costs bounded. Nothing is gated behind a payment.",
   },
   dashboard: {
     repoUrlLabel: "GitHub repository URL",
     productionUrlLabel: "Production URL",
     tokenLabel: "GitHub token (optional)",
     tokenHint: "Your own token raises rate limits. Used for this request only, never stored.",
-    licenseLabel: "Licence key (paid plans, optional)",
-    licenseHint:
-      "Paid plans are activated manually: paste the key you received. The server verifies its signature before applying the plan's limits. Kept for this session only.",
-    licensePlaceholder: "gv1… (optional)",
     tokenPlaceholder: "ghp_… (optional)",
     start: "Run the audit",
     running: "Audit running…",
     cancel: "Cancel",
+    trySample: "Try with an example",
     progressLabel: "Overall audit progress",
     scoreLabel: "Health score",
     partial: "(partial)",
@@ -200,11 +138,12 @@ export const en = {
     okCount: "{count} controls",
     okSection: "Successful controls",
     siteTitle: "Production audit",
-    siteLocked:
-      "The production audit (HTTPS, TLS, security headers) is included from the Essential plan. This run checked the repository only.",
     siteEmpty: "Waiting for an audit to start.",
     siteFailedTitle: "Check failed.",
-    bannerDemo: "Early access · no accounts",
+    bannerDemo: "100% free · no accounts",
+    supportText:
+      "GuardVibe is free and independent. Donations cover the servers and keep it that way.",
+    supportCta: "Support the project",
     phaseScan: "Repository scan",
     phaseSite: "Production audit",
     footer:
@@ -230,7 +169,7 @@ export const en = {
   },
   footer: {
     tagline: "Real audits for AI-built SaaS.",
-    linksPricing: "Pricing",
+    linksSupport: "Support the project",
     linksApp: "Run an audit",
     linksLegal: "Terms & privacy",
     demo: "Built with real data: GitHub, OSV.dev live HTTP checks.",
@@ -242,7 +181,7 @@ export const en = {
     termsTitle: "Terms of service",
     t1: "The service provides automated security checks of GitHub repositories and public URLs. You are responsible for having the right to scan what you submit.",
     t2: "The service is provided “as is”, without warranty of completeness: an automated audit cannot replace a security review. Findings are indicators, not guarantees.",
-    t3: "During early access, paid plans are provisioned manually within 24 h of payment and can be cancelled anytime; unused periods are refunded pro rata.",
+    t3: "The service is free. Usage limits (audits per minute and per day) keep it stable for everyone; abuse leads to restrictions.",
     t4: "Any abuse (mass scanning, attempting to attack submitted targets) leads to immediate suspension.",
     privacyTitle: "Privacy policy",
     p1: "No accounts, no database: scans live in your browser only. We do not keep repository URLs, findings or reports on our servers.",
@@ -252,11 +191,26 @@ export const en = {
     contact: "Contact: {email}",
     note: "Template provided with GuardVibe — have it reviewed by a lawyer for full compliance in your jurisdiction.",
   },
+  support: {
+    title: "Free. Sustained by donations.",
+    intro:
+      "GuardVibe costs nothing: no account, no card, no subscription. Donations pay for the servers and keep the tool online — and free — for everyone.",
+    usageTitle: "Fair-use quotas",
+    usageNote:
+      "Fair-use quotas keep the service stable for all ({perMinute} audits per minute, {perDay} per day per network). Adding your own GitHub token makes repository scans faster.",
+    kofiTitle: "Ko-fi",
+    kofiText: "One-time or monthly support, in a few clicks.",
+    kofiCta: "Donate on Ko-fi",
+    paypalTitle: "PayPal",
+    paypalText: "Send a one-off donation directly.",
+    paypalCta: "Donate via PayPal",
+    closing: "No donation is too small. Thank you for keeping GuardVibe alive.",
+  },
 } as const;
 
 export type Dictionary = typeof en;
 
-// Clés à plat typées automatiquement: "pricing.plans.free.f1", "dashboard.start"…
+// Clés à plat typées automatiquement: "support.kofiTitle", "dashboard.start"…
 type Flatten<T, Prefix extends string = ""> =
   T extends object
     ? {

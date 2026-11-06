@@ -1,8 +1,15 @@
 import "server-only";
 
 import { z } from "zod";
-import { sleep, isAbortError } from "@/lib/sleep";
+import { isAbortError } from "@/lib/sleep";
 import { getServerEnv } from "@/lib/env";
+import { detectLockKind, resolvePackagesForAudit } from "@/lib/lockfile";
+import {
+  findSecrets,
+  MAX_SECRET_FINDINGS,
+  RULE_COPY,
+  type SecretMatch,
+} from "@/lib/secrets";
 import { parseGithubRepoUrl } from "@/lib/validation";
 import { queryVulnerabilities, type DependencyRef } from "@/services/vulnClient";
 import type { Finding, ProgressRange, ScanEvent, Severity } from "@/types";
@@ -10,9 +17,12 @@ import type { Finding, ProgressRange, ScanEvent, Severity } from "@/types";
 /**
  * Scan RÉEL d'un dépôt GitHub :
  *  1. existence + arborescence via l'API github.com (1 à 2 requêtes de quota) ;
- *  2. lecture des fichiers via raw.githubusercontent.com (hors quota API) ;
- *  3. détection de secrets par règles + hygiène (.env commité, .gitignore, lockfile, CI) ;
- *  4. vulnérabilités connues via OSV.dev à partir du manifeste npm.
+ *  2. lecture des fichiers via raw.githubusercontent.com, avec le token
+ *     pour les dépôts privés (repli API GitHub si le raw refuse) ;
+ *  3. détection de secrets par règles, fichiers à risque en premier
+ *     (.env, workflows, auth), plusieurs constats par fichier ;
+ *  4. hygiène (.env commité, .gitignore, lockfile, CI, hachage) ;
+ *  5. vulnérabilités connues via OSV.dev sur les versions du lockfile.
  * En cas d'annulation, le générateur se termine silencieusement.
  */
 
@@ -26,83 +36,22 @@ export type ScanInput = {
 const MAX_CODE_FILES = 50;
 const MAX_FILES_CEILING = 500;
 const MAX_FILE_BYTES = 64 * 1024;
+const MAX_LOCK_BYTES = 8 * 1024 * 1024;
+const FETCH_BATCH = 6;
 const CODE_EXTENSIONS = [
   ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".rb", ".go",
   ".java", ".kt", ".php", ".cs", ".swift", ".dart",
+  ".yml", ".yaml", ".json", ".toml", ".ini", ".sh",
 ];
 const IGNORED_PATH_RES: readonly RegExp[] = [
-  /^\.github\//, /^vendor\//, /^coverage\//, /^dist\//, /^build\//,
+  /^vendor\//, /^coverage\//, /^dist\//, /^build\//,
   /^node_modules\//, /(\.min\.js|\.spec\.|\.test\.|\.d\.ts)$/,
 ];
+const LOCK_BASENAMES = ["pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock"];
 
-type SecretRule = { id: string; severity: Severity; regex: RegExp };
-type RuleCopy = { issue: string; explanation: string; fix: string };
-
-const RULE_COPY: Record<string, RuleCopy> = {
-  "rule-github-pat": {
-    issue: "GitHub personal access token committed",
-    explanation:
-      "A GitHub token is present in this file. Anyone with read access to the repository can retrieve it and act with your account or organization permissions — leaked tokens are harvested automatically within minutes.",
-    fix: "1. Revoke the token (GitHub → Settings → Developer settings).\n2. Remove it from the code and purge the history where needed.\n3. Read secrets from a server-only environment variable validated with zod.",
-  },
-  "rule-stripe-secret": {
-    issue: "Stripe secret key committed",
-    explanation: "A live Stripe secret key appears in the source. Leaked, it grants full control over payments and customer data of the linked account.",
-    fix: "1. Rotate the key in the Stripe dashboard immediately.\n2. Call Stripe from a server-side route only, with the key read from a validated environment variable (never NEXT_PUBLIC_).",
-  },
-  "rule-openai-key": {
-    issue: "OpenAI API key committed",
-    explanation: "An OpenAI key is readable in code; it can bill prompts on your account or reveal prompt content.",
-    fix: "1. Revoke the key on platform.openai.com.\n2. Call the provider from the server only, reading the key from a validated environment variable.",
-  },
-  "rule-aws-access-key": {
-    issue: "AWS access key committed",
-    explanation: "An AWS access key id appears in source. Bots scan public repositories for these keys within minutes to abuse cloud privileges.",
-    fix: "1. Deactivate the key pair in IAM right away.\n2. Prefer short-lived roles (OIDC federation) instead of static keys in code.",
-  },
-  "rule-slack-token": {
-    issue: "Slack token committed",
-    explanation: "A Slack bot or user token is committed; message history, channels and webhooks can be read or manipulated.",
-    fix: "Rotate it in Slack App Management, restrict scopes, and keep the value in a server-side environment variable.",
-  },
-  "rule-gitlab-pat": {
-    issue: "GitLab personal access token committed",
-    explanation: "A GitLab PAT grants API access to projects, packages and CI variables.",
-    fix: "Revoke it (GitLab → access tokens), then inject it as a protected environment variable.",
-  },
-  "rule-private-key": {
-    issue: "Private key material committed",
-    explanation: "A PEM private-key block is committed. Whoever obtains it can impersonate the service or sign as it.",
-    fix: "1. Treat this key as compromised and rotate it (CA, SSH, JWT issuer…).\n2. Generate a fresh key; only its path belongs in code, the secret lives in a secret manager.",
-  },
-  "rule-signed-jwt": {
-    issue: "Signed JWT committed",
-    explanation: "A signed JWT appears in code; it stays usable for its remaining lifetime and can leak claims.",
-    fix: "Remove token literals from code; mint JWTs at runtime (server-side) with short TTLs.",
-  },
-  "rule-hardcoded-credential": {
-    issue: "Possible hardcoded credential",
-    explanation: "A long opaque value is assigned to a password/API key-like variable. It may be a real secret or a throwaway — both deserve a review.",
-    fix: "Replace it with an environment variable validated server-side, and add secret-scanning in CI to catch regressions.",
-  },
-};
-
-// Construites au runtime par concaténation: aucune clé réelle en littéral.
-const RULES: readonly SecretRule[] = [
-  { id: "rule-github-pat", severity: "CRITICAL", regex: /\bgh[pousr]_[A-Za-z0-9]{30,}\b/ },
-  { id: "rule-stripe-secret", severity: "CRITICAL", regex: new RegExp("\\bsk_live_[A-Za-z0-9]{16,}\\b") },
-  { id: "rule-openai-key", severity: "CRITICAL", regex: /\bsk-proj-[A-Za-z0-9_-]{20,}\b/ },
-  { id: "rule-aws-access-key", severity: "CRITICAL", regex: new RegExp("\\b(AKIA)[0-9A-Z]{16}\\b") },
-  { id: "rule-slack-token", severity: "CRITICAL", regex: /\bxox[beas]-[A-Za-z0-9-]{10,}\b/ },
-  { id: "rule-gitlab-pat", severity: "CRITICAL", regex: /\bglpat-[A-Za-z0-9_-]{20,}\b/ },
-  { id: "rule-private-key", severity: "CRITICAL", regex: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
-  { id: "rule-signed-jwt", severity: "CRITICAL", regex: /\beyJ[A-Za-z0-9_-]{15,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,}\b/ },
-  {
-    id: "rule-hardcoded-credential",
-    severity: "WARNING",
-    regex: /(?:password|passwd|api[_-]?key|secret)[A-Za-z0-9_ "'-]*\s*[:=]\s*["'][A-Za-z0-9+/=_-]{16,}["']/i,
-  },
-];
+const LOCAL_AUTH = [/^next-auth$/, /^@auth\//, /^lucia$/, /^@lucia-auth\//, /^passport$/, /^better-auth$/];
+const HOSTED_AUTH = [/^@clerk\//, /^@supabase\/supabase-js$/, /^@auth0\//, /^firebase$/, /^@firebase\//];
+const HASH_LIBS = ["bcrypt", "bcryptjs", "argon2", "@node-rs/argon2"];
 
 const repoSchema = z.object({ default_branch: z.string() });
 const gitTreeSchema = z.object({
@@ -113,14 +62,12 @@ const gitTreeSchema = z.object({
       size: z.number().optional(),
     }),
   ),
+  truncated: z.boolean().optional(),
 });
 const packageJsonSchema = z.object({
   dependencies: z.record(z.string(), z.string()).optional(),
   devDependencies: z.record(z.string(), z.string()).optional(),
 });
-
-const EXACT_SEMVER = /^\d+\.\d+\.\d+(?:[-+].*)?$/;
-const PASSWORD_HASH_LIBS = ["bcrypt", "argon2"];
 
 export async function* scanRepository(
   input: ScanInput,
@@ -146,7 +93,6 @@ export async function* scanRepository(
       }
     }
 
-    // ---- 1. Existence du dépôt + branche par défaut ------------------------
     const repoResult = await ghJson(`repos/${ref.owner}/${ref.repo}`, token, signal);
     if (repoResult === null) {
       yield {
@@ -183,7 +129,6 @@ export async function* scanRepository(
     }
     const defaultBranch = repoParsed.data.default_branch;
 
-    // ---- 2. Arborescence ----------------------------------------------------
     const treeResult = await ghJson(
       `repos/${ref.owner}/${ref.repo}/git/trees/${encodeURIComponent(defaultBranch)}?recursive=1`,
       token,
@@ -204,25 +149,23 @@ export async function* scanRepository(
     }
     const blobs = treeParsed.data.tree.filter((entry) => entry.type === "blob");
 
-    // Plafond appliqué par le serveur selon le plan vérifié (jamais par le client).
     const fileCap = Math.min(
       Math.max(input.maxFiles ?? MAX_CODE_FILES, 1),
       MAX_FILES_CEILING,
     );
     const codeFiles = blobs
-      .filter((entry) => !IGNORED_PATH_RES.some((rx) => rx.test(entry.path)))
-      .filter((entry) => CODE_EXTENSIONS.some((ext) => entry.path.toLowerCase().endsWith(ext)))
-      .filter((entry) => entry.size === undefined || (entry.size >= 1 && entry.size <= MAX_FILE_BYTES))
+      .filter((entry) => isScannable(entry.path, entry.size))
+      .sort((left, right) => riskRank(right.path) - riskRank(left.path) || left.path.localeCompare(right.path))
       .slice(0, fileCap);
 
-    // Les gabarits versionnés (.env.example, .env.sample…) ne sont pas des secrets.
-    const envFiles = blobs.filter(
-      (entry) => /^\.env(\..+)?$/.test(entry.path) && !isEnvTemplate(entry.path),
-    );
-    const hasLockfile = blobs.some(
-      (entry) =>
-        /^(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|npm-shrinkwrap\.json)$/.test(entry.path),
-    );
+    const envFiles = blobs.filter((entry) => {
+      const base = entry.path.split("/").pop() ?? entry.path;
+      return isEnvFile(base) && !isEnvTemplate(base);
+    });
+    const hasLockfile = blobs.some((entry) => LOCK_BASENAMES.includes(entry.path));
+    const lockEntry = LOCK_BASENAMES
+      .map((name) => blobs.find((entry) => entry.path === name))
+      .find((entry) => entry !== undefined);
     const gitignoreEntry = blobs.find((entry) => entry.path === ".gitignore");
     const hasWorkflows = blobs.some(
       (entry) => entry.path.startsWith(".github/workflows/") && /\.ya?ml$/.test(entry.path),
@@ -232,25 +175,50 @@ export async function* scanRepository(
     yield { type: "scan_started", totalFiles: codeFiles.length };
 
     const hygieneFindings: Finding[] = [];
-    const totalUnits = codeFiles.length + 4;
-    let doneUnits = 0;
-
-    // ---- 3. Contenu des fichiers: détection de secrets -----------------------
-    for (const file of codeFiles) {
-      if (signal.aborted) return;
-      const content = await rawContent(ref.owner, ref.repo, defaultBranch, file.path, signal);
-      if (content !== null) {
-        const match = findFirstSecret(content);
-        if (match !== null) {
-          yield { type: "finding", finding: buildSecretFinding(file.path, match) };
-        }
-      }
-      doneUnits += 1;
-      yield { type: "progress", value: interpolate(range, doneUnits, totalUnits) };
-      if (doneUnits % 5 === 0) await sleep(randomIntBetween(120, 320), signal);
+    if (treeParsed.data.truncated === true) {
+      hygieneFindings.push({
+        id: "scan-tree-truncated",
+        file: defaultBranch,
+        severity: "WARNING",
+        issue: "Repository tree was truncated by GitHub",
+        explanation:
+          "GitHub did not return the full file list. Files past the cutoff were not scanned, so a clean report on this repository is incomplete.",
+        fix: "Split the repository or audit the unscanned directories with a local secret scanner.",
+      });
     }
 
-    // ---- 4. Fichiers .env commités ------------------------------------------
+    const totalUnits = codeFiles.length + 4;
+    let doneUnits = 0;
+    let secretCount = 0;
+
+    for (let offset = 0; offset < codeFiles.length; offset += FETCH_BATCH) {
+      if (signal.aborted) return;
+      if (secretCount >= MAX_SECRET_FINDINGS) {
+        doneUnits = codeFiles.length;
+        yield { type: "progress", value: interpolate(range, doneUnits, totalUnits) };
+        break;
+      }
+
+      const batch = codeFiles.slice(offset, offset + FETCH_BATCH);
+      const contents = await Promise.all(
+        batch.map((file) => rawContent(ref.owner, ref.repo, defaultBranch, file.path, token, signal)),
+      );
+
+      for (let index = 0; index < batch.length; index += 1) {
+        const file = batch[index];
+        const content = contents[index];
+        if (file !== undefined && content != null && secretCount < MAX_SECRET_FINDINGS) {
+          for (const match of findSecrets(content)) {
+            if (secretCount >= MAX_SECRET_FINDINGS) break;
+            yield { type: "finding", finding: buildSecretFinding(file.path, match) };
+            secretCount += 1;
+          }
+        }
+        doneUnits += 1;
+        yield { type: "progress", value: interpolate(range, doneUnits, totalUnits) };
+      }
+    }
+
     if (envFiles.length > 0) {
       const names = envFiles.slice(0, 4).map((entry) => entry.path).join(", ");
       hygieneFindings.push({
@@ -259,16 +227,15 @@ export async function* scanRepository(
         severity: "CRITICAL",
         issue: "Committed .env file(s)",
         explanation:
-          "The repository history contains environment files. They usually hold database passwords and provider keys: committing them leaks secrets through the repo, forks and build caches.",
+          "The repository history contains environment files. They usually hold database passwords and provider keys: committing them leaks secrets through the repo, forks and build caches. Their contents are scanned with the same secret rules when they fit in the file cap.",
         fix: "1. Add `.env*` (except `!.env.example`) to .gitignore.\n2. Rotate every secret that may appear in these files.\n3. Purge the history where needed (git filter-repo).",
       });
     }
 
-    // ---- 5. .gitignore --------------------------------------------------------
     const gitignoreContent =
       gitignoreEntry === undefined
         ? null
-        : await rawContent(ref.owner, ref.repo, defaultBranch, ".gitignore", signal);
+        : await rawContent(ref.owner, ref.repo, defaultBranch, ".gitignore", token, signal);
     doneUnits += 1;
     yield { type: "progress", value: interpolate(range, doneUnits, totalUnits) };
 
@@ -292,18 +259,28 @@ export async function* scanRepository(
       });
     }
 
-    // ---- 6. Manifeste npm + OSV.dev -------------------------------------------
     if (manifestEntry !== undefined) {
-      const manifestContent = await rawContent(ref.owner, ref.repo, defaultBranch, "package.json", signal);
+      const manifestContent = await rawContent(ref.owner, ref.repo, defaultBranch, "package.json", token, signal);
+      let lockText: string | null = null;
+      const lockKind = lockEntry === undefined ? null : detectLockKind(lockEntry.path);
+      const lockTooBig = lockEntry?.size !== undefined && lockEntry.size > MAX_LOCK_BYTES;
+      if (lockEntry !== undefined && lockKind !== null && !lockTooBig) {
+        lockText = await rawContent(ref.owner, ref.repo, defaultBranch, lockEntry.path, token, signal);
+      }
       if (manifestContent !== null) {
-        const manifestFindings = await buildManifestFindings(manifestContent, signal);
+        const manifestFindings = await buildManifestFindings(
+          manifestContent,
+          lockText,
+          lockKind,
+          lockTooBig,
+          signal,
+        );
         for (const finding of manifestFindings) hygieneFindings.push(finding);
       }
     }
     doneUnits += 1;
     yield { type: "progress", value: interpolate(range, doneUnits, totalUnits) };
 
-    // ---- 7. Lockfile + CI -------------------------------------------------------
     if (manifestEntry === undefined) {
       hygieneFindings.push({
         id: "scan-manifest-missing",
@@ -317,10 +294,11 @@ export async function* scanRepository(
     if (hasLockfile) {
       hygieneFindings.push({
         id: "scan-lockfile-ok",
-        file: "package.json",
+        file: lockEntry?.path ?? "package.json",
         severity: "OK",
         issue: "Lockfile committed",
-        explanation: "A lockfile pins the dependency graph exactly, so installs are reproducible across environments.",
+        explanation:
+          "A lockfile pins the dependency graph. Exact versions from the root lockfile are what OSV.dev is queried with.",
         fix: "Keep frozen installs in CI (`--frozen-lockfile`) so manifest/lockfile drift fails the build.",
       });
     } else if (manifestEntry !== undefined) {
@@ -329,7 +307,8 @@ export async function* scanRepository(
         file: "package.json",
         severity: "WARNING",
         issue: "No lockfile committed",
-        explanation: "Without package-lock/pnpm-lock/yarn.lock, installs resolve different trees between machines, CI and production.",
+        explanation:
+          "Without package-lock/pnpm-lock/yarn.lock, only exact versions written in package.json can be checked. Range specifiers are skipped, so known vulnerabilities in the resolved tree stay invisible.",
         fix: "Commit your lockfile and install with `--frozen-lockfile` in CI.",
       });
     }
@@ -355,7 +334,6 @@ export async function* scanRepository(
     doneUnits += 1;
     yield { type: "progress", value: interpolate(range, doneUnits, totalUnits) };
 
-    // ---- Émission des constats d'hygiène ----------------------------------------
     for (const finding of hygieneFindings) {
       yield { type: "finding", finding };
     }
@@ -366,23 +344,22 @@ export async function* scanRepository(
   }
 }
 
-// ---------------------------------------------------------------- interne ----
-
-function buildSecretFinding(filePath: string, match: { rule: SecretRule; line: number }): Finding {
+function buildSecretFinding(filePath: string, match: SecretMatch): Finding {
   const copy = RULE_COPY[match.rule.id];
+  const clientNote = match.clientExposed
+    ? " The value sits on a client-exposed variable (NEXT_PUBLIC_, VITE_ or similar), so it ships in the browser bundle."
+    : "";
   return {
     id: `scan-${match.rule.id}-${match.line}-${hashCode(filePath)}`,
     file: `${filePath} (line ${match.line})`,
     severity: match.rule.severity,
     issue: copy?.issue ?? "Sensitive value detected",
     explanation:
-      copy?.explanation ?? "A value matching a secret pattern was found. Double-check manually.",
-    fix:
-      copy?.fix ?? "Rotate the value and move it to a server-side environment variable.",
+      (copy?.explanation ?? "A value matching a secret pattern was found. Double-check manually.") + clientNote,
+    fix: copy?.fix ?? "Rotate the value and move it to a server-side environment variable.",
   };
 }
 
-/** Petit hash stable (FNV-1a-like) pour rendre les ids uniques et stables. */
 function hashCode(value: string): number {
   let hash = 0x811c9dc5;
   for (let index = 0; index < value.length; index += 1) {
@@ -392,21 +369,35 @@ function hashCode(value: string): number {
   return hash;
 }
 
-function findFirstSecret(content: string): { rule: SecretRule; line: number } | null {
-  const lines = content.split("\n");
-  for (const rule of RULES) {
-    for (let index = 0; index < lines.length; index += 1) {
-      const line = lines[index] ?? "";
-      rule.regex.lastIndex = 0;
-      if (rule.regex.test(line)) {
-        return { rule, line: index + 1 };
-      }
-    }
-  }
-  return null;
+function isScannable(path: string, size: number | undefined): boolean {
+  const base = path.split("/").pop() ?? path;
+  if (LOCK_BASENAMES.includes(base)) return false;
+  if (IGNORED_PATH_RES.some((pattern) => pattern.test(path))) return false;
+  if (size !== undefined && (size < 1 || size > MAX_FILE_BYTES)) return false;
+  if (base === "Dockerfile" || base === "dockerfile" || base === "Containerfile") return true;
+  if (isEnvFile(base) && !isEnvTemplate(base)) return true;
+  return CODE_EXTENSIONS.some((ext) => path.toLowerCase().endsWith(ext));
 }
 
-async function buildManifestFindings(content: string, signal: AbortSignal): Promise<readonly Finding[]> {
+function riskRank(path: string): number {
+  const lower = path.toLowerCase();
+  const base = lower.split("/").pop() ?? lower;
+  let rank = 0;
+  if (isEnvFile(base) && !isEnvTemplate(base)) rank += 100;
+  if (/(secret|credential|password|token|apikey|api-key|stripe|supabase)/.test(lower)) rank += 40;
+  if (lower.includes(".github/workflows/")) rank += 30;
+  if (/(^|\/)(middleware|auth|route)\.(t|j)sx?$/.test(lower)) rank += 20;
+  if (base === "dockerfile" || base.startsWith("docker-compose")) rank += 15;
+  return rank;
+}
+
+async function buildManifestFindings(
+  content: string,
+  lockText: string | null,
+  lockKind: ReturnType<typeof detectLockKind>,
+  lockTooBig: boolean,
+  signal: AbortSignal,
+): Promise<readonly Finding[]> {
   const manifestFindings: Finding[] = [];
 
   let body: unknown = null;
@@ -433,6 +424,38 @@ async function buildManifestFindings(content: string, signal: AbortSignal): Prom
     ...Object.entries(parsed.data.devDependencies ?? {}),
   ];
 
+  if (allDeps.some(([name]) => isHashLib(name))) {
+    manifestFindings.push({
+      id: "scan-hash-ok",
+      file: "package.json",
+      severity: "OK",
+      issue: "Password hashing library present (bcrypt/argon2)",
+      explanation: "The dependency list includes a recognized password-hashing library, the right approach for credential storage.",
+      fix: "Keep parameters modern (bcrypt cost ≥ 12) and never log passwords or hashes.",
+    });
+  } else if (needsLocalPasswordHash(allDeps.map(([name]) => name))) {
+    manifestFindings.push({
+      id: "scan-hash-missing",
+      file: "package.json",
+      severity: "WARNING",
+      issue: "Local auth dependency without a password hashing library",
+      explanation:
+        "The manifest includes a library that stores credentials in your app (NextAuth, Lucia, Passport, Better Auth) and neither bcrypt, bcryptjs nor argon2.",
+      fix: "Hash passwords with argon2 or bcrypt (cost ≥ 12). Hosted auth (Clerk, Supabase, Auth0) does not need this.",
+    });
+  }
+
+  if (lockTooBig) {
+    manifestFindings.push({
+      id: "scan-lockfile-too-big",
+      file: "lockfile",
+      severity: "WARNING",
+      issue: "Lockfile is too large to resolve versions",
+      explanation: "The root lockfile exceeds 8 MB, so OSV.dev is queried with exact versions from package.json only.",
+      fix: "Run `pnpm audit` locally for the full tree, and keep the lockfile reviewable.",
+    });
+  }
+
   if (allDeps.length === 0) {
     manifestFindings.push({
       id: "scan-osv-empty",
@@ -445,65 +468,100 @@ async function buildManifestFindings(content: string, signal: AbortSignal): Prom
     return manifestFindings;
   }
 
-  if (allDeps.some(([name]) => PASSWORD_HASH_LIBS.some((lib) => name.toLowerCase().includes(lib)))) {
+  const resolved = resolvePackagesForAudit(
+    allDeps.map(([name, range]) => ({ name, range })),
+    lockTooBig ? null : lockText,
+    lockTooBig ? null : lockKind,
+  );
+
+  if (resolved.lockfileBroken) {
     manifestFindings.push({
-      id: "scan-hash-ok",
-      file: "package.json",
-      severity: "OK",
-      issue: "Password hashing library present (bcrypt/argon2)",
-      explanation: "The dependency list includes a recognized password-hashing library, the right approach for credential storage.",
-      fix: "Keep parameters modern (bcrypt cost ≥ 12) and never log passwords or hashes.",
+      id: "scan-lockfile-unreadable",
+      file: "lockfile",
+      severity: "WARNING",
+      issue: "Lockfile could not be parsed",
+      explanation: "The root lockfile is present but unreadable, so only exact versions written in package.json were eligible for OSV.dev.",
+      fix: "Regenerate the lockfile (`pnpm install`) and commit it. Then re-run the audit.",
     });
   }
 
-  const pinnedRefs: DependencyRef[] = [];
-  let unpinnedCount = 0;
-  for (const [name, version] of allDeps) {
-    if (EXACT_SEMVER.test(version)) pinnedRefs.push({ name, version });
-    else unpinnedCount += 1;
+  const pinnedRefs: DependencyRef[] = resolved.packages.map((pkg) => ({
+    name: pkg.name,
+    version: pkg.version,
+  }));
+
+  if (resolved.unresolvedDirect > 0) {
+    manifestFindings.push({
+      id: "scan-unpinned",
+      file: "package.json",
+      severity: "WARNING",
+      issue: `${resolved.unresolvedDirect} direct dependencies have no exact version`,
+      explanation: lockText === null && !lockTooBig
+        ? "Range specifiers (^, ~, *) and a missing usable lockfile mean those packages were not sent to OSV.dev. A clean dependency line would not cover them."
+        : "These direct dependencies are neither exact in package.json nor present in the parsed lockfile, so OSV.dev did not see them.",
+      fix: "Commit the lockfile and install with `--frozen-lockfile`. Treat the lockfile as the source of truth.",
+    });
   }
 
-  const vulnerabilities =
-    pinnedRefs.length > 0 ? await queryVulnerabilities(pinnedRefs, signal) : [];
+  if (pinnedRefs.length === 0) return manifestFindings;
 
-  if (pinnedRefs.length > 0 && vulnerabilities.length === 0) {
+  const query = await queryVulnerabilities(pinnedRefs, signal);
+  if (query.status === "unavailable") {
+    manifestFindings.push({
+      id: "scan-osv-unavailable",
+      file: "package.json",
+      severity: "WARNING",
+      issue: "Dependency advisory check unavailable",
+      explanation:
+        "OSV.dev did not answer, so this audit cannot claim the dependencies are free of known vulnerabilities.",
+      fix: "Re-run the audit. If OSV.dev stays unreachable, run `pnpm audit` locally before shipping.",
+    });
+    return manifestFindings;
+  }
+
+  const vulnerabilities = query.vulnerabilities;
+  if (vulnerabilities.length === 0 && resolved.unresolvedDirect === 0) {
     manifestFindings.push({
       id: "scan-osv-ok",
       file: "package.json",
       severity: "OK",
       issue: "No known vulnerability from OSV.dev",
-      explanation: `Checked ${pinnedRefs.length} pinned dependencies against OSV.dev advisories: none reported (npm ecosystem, exact versions).`,
+      explanation: `Checked ${pinnedRefs.length} versions (lockfile when present, otherwise exact pins) against OSV.dev: none reported.`,
       fix: "Keep a weekly audit in CI and re-pin after each upgrade.",
     });
   } else if (vulnerabilities.length > 0) {
-    const worstSeverity: Severity = vulnerabilities.length >= 3 ? "CRITICAL" : "WARNING";
+    const severe = vulnerabilities.some(
+      (item) => item.highestSeverity === "CRITICAL" || item.highestSeverity === "HIGH",
+    );
+    const worstSeverity: Severity = severe ? "CRITICAL" : "WARNING";
     const listing = vulnerabilities
       .slice(0, 5)
-      .map((v) => `${v.dependency.name}@${v.dependency.version} → ${v.advisoryIds.slice(0, 2).join(", ")}`)
+      .map((item) => `${item.dependency.name}@${item.dependency.version} → ${item.advisoryIds.slice(0, 2).join(", ")}`)
       .join(" ; ");
     manifestFindings.push({
       id: "scan-osv-issues",
       file: "package.json",
       severity: worstSeverity,
       issue: `${vulnerabilities.length} dependencies with published advisories`,
-      explanation: `OSV.dev (public vulnerability database) reports advisories for these exact versions: ${listing}${
+      explanation: `OSV.dev reports advisories for these resolved versions: ${listing}${
         vulnerabilities.length > 5 ? ` (+${vulnerabilities.length - 5} more)` : ""
-      }. These are real CVE/GHSA entries — check each advisory before upgrading.`,
+      }. High and critical advisories are scored as critical. Check each advisory before upgrading.`,
       fix: "Run `pnpm audit` for the full list, then upgrade or override the affected packages; block releases while the audit fails.",
     });
   }
 
-  if (unpinnedCount > 0) {
-    manifestFindings.push({
-      id: "scan-unpinned",
-      file: "package.json",
-      severity: "WARNING",
-      issue: `${unpinnedCount} dependencies use range versions`,
-      explanation: "Range specifiers (^, ~, *) let different installs resolve different trees; audits become non-deterministic.",
-      fix: "Commit the lockfile and enforce frozen installs in CI; treat the lockfile as the source of truth.",
-    });
-  }
   return manifestFindings;
+}
+
+function isHashLib(name: string): boolean {
+  const lower = name.toLowerCase();
+  return HASH_LIBS.some((lib) => lower === lib);
+}
+
+function needsLocalPasswordHash(names: readonly string[]): boolean {
+  const hosted = names.some((name) => HOSTED_AUTH.some((pattern) => pattern.test(name)));
+  if (hosted) return false;
+  return names.some((name) => LOCAL_AUTH.some((pattern) => pattern.test(name)));
 }
 
 const GITHUB_HEADERS: Record<string, string> = {
@@ -556,19 +614,41 @@ async function rawContent(
   repo: string,
   branch: string,
   path: string,
+  token: string | undefined,
   signal: AbortSignal,
 ): Promise<string | null> {
   const encodedPath = path
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
+  const rawUrl = `${RAW_BASE}/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${encodeURIComponent(branch)}/${encodedPath}`;
+  const fromRaw = await fetchText(rawUrl, token, signal);
+  if (fromRaw !== null) return fromRaw;
+  if (token === undefined) return null;
+
+  const apiUrl = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`;
+  return fetchText(apiUrl, token, signal, "application/vnd.github.raw");
+}
+
+async function fetchText(
+  url: string,
+  token: string | undefined,
+  signal: AbortSignal,
+  accept?: string,
+): Promise<string | null> {
   try {
-    const response = await fetch(
-      `${RAW_BASE}/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${encodeURIComponent(
-        branch,
-      )}/${encodedPath}`,
-      { signal: AbortSignal.any([signal, AbortSignal.timeout(8_000)]), cache: "no-store" },
-    );
+    const headers: Record<string, string> = {};
+    if (token !== undefined) headers.Authorization = `Bearer ${token}`;
+    if (accept !== undefined) {
+      headers.Accept = accept;
+      headers["X-GitHub-Api-Version"] = "2022-11-28";
+      headers["User-Agent"] = "guardvibe-scan";
+    }
+    const response = await fetch(url, {
+      headers,
+      signal: AbortSignal.any([signal, AbortSignal.timeout(8_000)]),
+      cache: "no-store",
+    });
     if (!response.ok) return null;
     return await response.text();
   } catch (error) {
@@ -577,12 +657,15 @@ async function rawContent(
   }
 }
 
-/** Gabarits d'environnement versionnés : attendus dans un dépôt, jamais des secrets. */
 const ENV_TEMPLATE_RE =
   /^\.env(?:\.[A-Za-z0-9_-]+)*\.(?:example|sample|template|dist|defaults)$/;
 
-function isEnvTemplate(path: string): boolean {
-  return ENV_TEMPLATE_RE.test(path);
+function isEnvFile(base: string): boolean {
+  return /^\.env(?:\..+)?$/.test(base);
+}
+
+function isEnvTemplate(base: string): boolean {
+  return ENV_TEMPLATE_RE.test(base);
 }
 
 function excludesEnvFiles(content: string): boolean {
@@ -598,8 +681,4 @@ function interpolate(range: ProgressRange, current: number, total: number): numb
   if (total <= 0) return range.to;
   const ratio = current / total;
   return Math.min(range.to, Math.round(range.from + ratio * (range.to - range.from)));
-}
-
-function randomIntBetween(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
 }

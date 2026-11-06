@@ -190,13 +190,33 @@ export const productionUrlSchema = z
 
 export type ProductionUrlSchema = z.infer<typeof productionUrlSchema>;
 
-export const scanRequestSchema = z.object({
-  repoUrl: repoUrlSchema,
-  productionUrl: productionUrlSchema,
-  /** Token GitHub optionnel fourni par l'utilisateur (sans stockage). */
-  githubToken: z.string().optional(),
-  /** Clé de licence d'un plan payant (vérifiée par signature côté serveur). */
-  licenseKey: z.string().trim().max(512).optional(),
-});
+export const scanRequestSchema = z
+  .object({
+    repoUrl: repoUrlSchema,
+    /** Absent ou vide : audit du dépôt seul, sans sonde du site. */
+    productionUrl: z.string().optional(),
+    /** Token GitHub optionnel fourni par l'utilisateur (sans stockage). */
+    githubToken: z.string().optional(),
+  })
+  .superRefine((value, ctx) => {
+    const trimmed = value.productionUrl?.trim() ?? "";
+    if (trimmed === "") return;
+    const parsed = productionUrlSchema.safeParse(trimmed);
+    if (!parsed.success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["productionUrl"],
+        message: parsed.error.issues[0]?.message ?? "Invalid production URL.",
+      });
+    }
+  })
+  .transform((value) => {
+    const trimmed = value.productionUrl?.trim() ?? "";
+    return {
+      repoUrl: value.repoUrl,
+      productionUrl: trimmed === "" ? undefined : trimmed,
+      githubToken: value.githubToken,
+    };
+  });
 
 export type ScanRequest = z.infer<typeof scanRequestSchema>;
