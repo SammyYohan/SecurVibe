@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Loader2, Play, Sparkles, Square } from "lucide-react";
+import { KeyRound, Loader2, Play, Square } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,6 @@ type FieldErrors = {
 };
 
 const EMPTY_ERRORS: FieldErrors = { repoUrl: null, productionUrl: null };
-
-const SAMPLE = {
-  repoUrl: "https://github.com/expressjs/express",
-  productionUrl: "https://example.com",
-};
 
 export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
   const { t } = useI18n();
@@ -64,12 +59,6 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
       productionUrl: parsed.data.productionUrl,
       githubToken: parsed.data.githubToken,
     });
-  };
-
-  const handleTrySample = (): void => {
-    setRepoUrl(SAMPLE.repoUrl);
-    setProductionUrl(SAMPLE.productionUrl);
-    setErrors(EMPTY_ERRORS);
   };
 
   return (
@@ -172,15 +161,6 @@ export function ScanForm({ isRunning, onStart, onCancel }: ScanFormProps) {
             <Play className="h-4 w-4" aria-hidden="true" />
           )}
           {isRunning ? t("dashboard.running") : t("dashboard.start")}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={handleTrySample}
-          disabled={isRunning}
-        >
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
-          {t("dashboard.trySample")}
         </Button>
         {isRunning ? (
           <Button type="button" variant="outline" onClick={onCancel}>

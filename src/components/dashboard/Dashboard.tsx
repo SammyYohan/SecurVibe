@@ -442,7 +442,7 @@ function DashboardInner() {
         aria-label={t("dashboard.findTitle")}
         className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
       >
-        <SecurityReport findings={state.findings} />
+        <SecurityReport findings={state.findings} score={displayedScore} />
         <SiteAuditPanel steps={state.steps} />
       </section>
 

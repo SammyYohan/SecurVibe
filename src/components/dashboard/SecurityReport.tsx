@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Check, Copy, Loader2, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -20,6 +20,7 @@ import type { Finding, Severity } from "@/types";
 
 export type SecurityReportProps = {
   findings: Finding[];
+  score: number | null;
 };
 
 const SEVERITY_PANEL: Record<Severity, string> = {
@@ -99,9 +100,12 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
   }
 }
 
-export function SecurityReport({ findings }: SecurityReportProps) {
+export function SecurityReport({ findings, score }: SecurityReportProps) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [aiResult, setAiResult] = useState<{ analysis: string; prompt: string } | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const copiedTimerRef = useRef<number | null>(null);
   const critical = findings.filter((f) => f.severity === "CRITICAL");
   const warning = findings.filter((f) => f.severity === "WARNING");
@@ -126,6 +130,32 @@ export function SecurityReport({ findings }: SecurityReportProps) {
       setCopied(false);
     }, 2000);
   }, [critical, warning]);
+
+  const handleAiAnalysis = useCallback(async (): Promise<void> => {
+    setIsAnalyzing(true);
+    setAiError(null);
+    try {
+      const response = await fetch("/api/ai-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ findings, score }),
+      });
+      const payload = await response.json() as { analysis?: string; prompt?: string; error?: string };
+      if (!response.ok || payload.analysis === undefined || payload.prompt === undefined) {
+        throw new Error(payload.error ?? t("dashboard.aiError"));
+      }
+      setAiResult({ analysis: payload.analysis, prompt: payload.prompt });
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : t("dashboard.aiError"));
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [findings, score, t]);
+
+  const handleCopyPrompt = useCallback(async (): Promise<void> => {
+    if (aiResult === null) return;
+    await copyTextToClipboard(aiResult.prompt);
+  }, [aiResult]);
 
   const severityLabel: Record<Severity, string> = {
     CRITICAL: t("severities.critical"),
@@ -169,6 +199,37 @@ export function SecurityReport({ findings }: SecurityReportProps) {
               )}
               {copied ? t("dashboard.copied") : t("dashboard.copyList")}
             </Button>
+          </div>
+        ) : null}
+
+        {findings.length > 0 ? (
+          <div className="mb-5 rounded-2xl border border-line bg-tint p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-ink">{t("dashboard.aiTitle")}</p>
+                <p className="mt-1 text-sm leading-relaxed text-mute">{t("dashboard.aiDescription")}</p>
+              </div>
+              <Button type="button" variant="outline" onClick={() => void handleAiAnalysis()} disabled={isAnalyzing}>
+                {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
+                {isAnalyzing ? t("dashboard.aiRunning") : t("dashboard.aiAction")}
+              </Button>
+            </div>
+            {aiError !== null ? <p role="alert" className="mt-3 text-sm font-medium text-crit">{aiError}</p> : null}
+            {aiResult !== null ? (
+              <div className="mt-4 grid gap-4 border-t border-line pt-4">
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-ink">{t("dashboard.aiAnalysis")}</p>
+                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-xl bg-card p-4 text-sm leading-relaxed text-ink">{aiResult.analysis}</pre>
+                </div>
+                <div>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-ink">{t("dashboard.aiPrompt")}</p>
+                    <Button type="button" variant="ghost" onClick={() => void handleCopyPrompt()}>{t("dashboard.aiCopy")}</Button>
+                  </div>
+                  <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-line bg-card p-4 text-sm leading-relaxed text-ink">{aiResult.prompt}</pre>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
