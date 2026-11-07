@@ -1,9 +1,0 @@
-# GitHub Sponsors configuration — powers the "Sponsor this project" button
-# on the repository page (rendered by GitHub itself).
-#
-# FORKERS: replace the placeholders below with your own accounts BEFORE
-# publishing your fork. The /support page of the app is configured separately
-# through the NEXT_PUBLIC_KOFI_URL and NEXT_PUBLIC_PAYPAL_URL env vars.
-
-ko-fi: sammyyohan
-paypal: https://paypal.me/sammyyohan

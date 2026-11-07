@@ -2,10 +2,8 @@
 
 **Real security audits for AI-built SaaS** — GitHub scanner + production audit, in ≈ 60 seconds, 100% free, no account.
 
-[![CI](https://github.com/SammyYohan/GuardVibe/actions/workflows/ci.yml/badge.svg)](https://github.com/SammyYohan/GuardVibe/actions/workflows/ci.yml)
+[![CI](https://github.com/SammyYohan/SecurVibe/actions/workflows/ci.yml/badge.svg)](https://github.com/SammyYohan/SecurVibe/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2d5a88.svg)](./LICENSE)
-[![Donate on Ko-fi](https://img.shields.io/badge/Donate-Ko--fi-29ABE0?logo=ko-fi&logoColor=white)](https://ko-fi.com/sammyyohan)
-[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/sammyyohan)
 
 > 🌍 Interface available in 8 languages: English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).
 > Audit findings and fixes are written in English — the security-tool standard — and are displayed in every locale.
@@ -62,8 +60,7 @@ src/
 │   ├── [locale]/
 │   │   ├── layout.tsx          ← root layout (lang/dir RTL, hreflang SEO)
 │   │   ├── page.tsx            ← landing (hero, benefits, comparison, FAQ)
-│   │   ├── support/page.tsx    ← support the project (Ko-fi / PayPal donations & quotas)
-│   │   ├── pricing/page.tsx    ← permanent redirect to /support (product is free)
+│   │   ├── pricing/page.tsx    ← permanent redirect to /app (product is free)
 │   │   ├── legal/page.tsx      ← terms & privacy
 │   │   ├── app/page.tsx        ← dashboard (scanner)
 │   │   ├── error.tsx           ← localized error boundary
@@ -101,7 +98,7 @@ src/
 
 SecurVibe is **100% free — no signup, no ads, no telemetry**.
 
-Running the service is funded by **voluntary donations** (Ko-fi, PayPal). Fair-use quotas protect the infrastructure and keep it available for everyone:
+Fair-use quotas protect the infrastructure and keep it available for everyone:
 
 | Quota | Limit | Description |
 | --- | --- | --- |
@@ -125,7 +122,6 @@ Every variable is **optional** (see [`.env.example`](./.env.example)):
 | `UPSTASH_REDIS_REST_URL` & `UPSTASH_REDIS_REST_TOKEN` | Shared quota store (Upstash, REST API) |
 | `OPENROUTER_API_KEY` | Optional: enables the "Analyze with AI" review in the report |
 | `OPENROUTER_MODEL` | Optional: review model (default: `openai/gpt-4o-mini`) |
-| `NEXT_PUBLIC_KOFI_URL` & `NEXT_PUBLIC_PAYPAL_URL` | Donation links for the `/support` page |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URL + hreflang (also OpenRouter's `HTTP-Referer`) |
 | `CONTACT_EMAIL` | Contact address shown on the legal page |
 
@@ -165,15 +161,9 @@ Contributions are welcome:
 
 ---
 
-## Forking & keeping it free
+## Forking
 
-Forking SecurVibe for your own deployment is exactly what the MIT license is for:
-
-1. Keep the [`LICENSE`](./LICENSE) file.
-2. Replace the placeholders in [`.github/FUNDING.yml`](./.github/FUNDING.yml) and in the badges above with **your own** Ko-fi / PayPal accounts.
-3. Set `NEXT_PUBLIC_KOFI_URL` / `NEXT_PUBLIC_PAYPAL_URL` so your instance's `/support` page links to your accounts.
-
-If you deployed your own instance but still use this project's docs, issues, or ideas, contributing donations or code upstream keeps the original alive — no donation is too small.
+Forking SecurVibe for your own deployment is exactly what the MIT license is for: keep the [`LICENSE`](./LICENSE) file, deploy your own instance, and stay 100% free for your users — no paywall mechanics are built in.
 
 ---
 

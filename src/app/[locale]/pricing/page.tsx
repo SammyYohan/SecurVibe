@@ -7,11 +7,11 @@ export type PricingPageProps = {
 };
 
 /*
- * SecurVibe is 100% free: the pricing page is replaced by the
- * support / donation page (/support). Permanent redirect.
+ * SecurVibe is 100% free: the pricing page redirects to the free
+ * dashboard (/app). Permanent redirect.
  */
 export default async function PricingPage({ params }: PricingPageProps) {
   const { locale: candidate } = await params;
   const locale: Locale = isLocale(candidate) ? candidate : "en";
-  redirect(`/${locale}/support`);
+  redirect(`/${locale}/app`);
 }

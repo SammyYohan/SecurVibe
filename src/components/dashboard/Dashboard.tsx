@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Heart, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { z } from "zod";
@@ -387,24 +387,6 @@ function DashboardInner() {
         />
       </header>
 
-      {state.status === "done" ? (
-        <div
-          role="status"
-          className="flex items-start gap-3 rounded-2xl bg-tint px-5 py-4 text-sm text-ink"
-        >
-          <Heart className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
-          <p>
-            {t("dashboard.supportText")}{" "}
-            <Link
-              href={`/${locale}/support`}
-              className="font-semibold text-accent transition-colors hover:text-ink"
-            >
-              {t("dashboard.supportCta")}
-            </Link>
-          </p>
-        </div>
-      ) : null}
-
       {state.errorMessage !== null ? (
         <div
           role="alert"
@@ -450,9 +432,6 @@ function DashboardInner() {
         <span className="w-full">{t("dashboard.footer")}</span>
         <Link href={`/${locale}/legal`} className="font-medium transition-colors hover:text-ink">
           {t("footer.linksLegal")}
-        </Link>
-        <Link href={`/${locale}/support`} className="font-medium transition-colors hover:text-ink">
-          {t("footer.linksSupport")}
         </Link>
       </footer>
     </div>

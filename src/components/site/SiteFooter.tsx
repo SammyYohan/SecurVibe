@@ -18,7 +18,6 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           <p>{t("footer.tagline")}</p>
         </div>
         <nav aria-label={t("footer.linksLegal")} className="flex flex-wrap gap-x-6 gap-y-2">
-          <Link className={LINK} href={`${base}/support`}>{t("footer.linksSupport")}</Link>
           <Link className={LINK} href={`${base}/app`}>{t("footer.linksApp")}</Link>
           <Link className={LINK} href={`${base}/legal`}>{t("footer.linksLegal")}</Link>
         </nav>

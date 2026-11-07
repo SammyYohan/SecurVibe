@@ -10,7 +10,6 @@ export const en = {
   },
   nav: {
     features: "Features",
-    support: "Support the project",
     faq: "FAQ",
     app: "Open the app",
     start: "Run a free audit",
@@ -23,7 +22,6 @@ export const en = {
     subtitle:
       "SecurVibe audits a GitHub repository and a live production URL in about a minute: hardcoded secrets, vulnerable dependencies, missing security headers, weak TLS — with a score and fixes you can act on.",
     ctaPrimary: "Run a free audit",
-    ctaSecondary: "Support the project",
     note1: "No account required",
     note2: "Nothing is stored on our side",
     note3: "Result in ≈ 60 s",
@@ -87,7 +85,7 @@ export const en = {
     r1: "First report", v1g: "≈ 60 seconds", v1o: "Setup, agents, sales calls",
     r2: "Account required", v2g: "No", v2o: "Yes",
     r3: "Starting price", v3g: "100% free, no account", v3o: "Often $29+ / seat / month",
-    r4: "Funding", v4g: "Donations — you keep the choice", v4o: "Subscription required",
+    r4: "Price", v4g: "100% free, no catch", v4o: "Subscription required",
     r5: "Interface languages", v5g: "8", v5o: "Usually 1–2",
     r6: "Data kept by the service", v6g: "Nothing stored server-side", v6o: "Full audit history, billing data",
     r7: "Fix guidance", v7g: "Per finding, copy-pasteable", v7o: "Varies",
@@ -105,7 +103,7 @@ export const en = {
     q4: "Why do I see a rate limit?",
     a4: "Without a token, GitHub allows anonymous reads per IP (used by everyone scanning without a token). Adding your own token in the app removes this ceiling — it also speeds up scans.",
     q5: "How does SecurVibe stay free?",
-    a5: "It is entirely free, sustained by voluntary donations (Ko-fi, PayPal) and fair-use quotas that keep costs bounded. Nothing is gated behind a payment.",
+    a5: "It is entirely free. Fair-use quotas and a lean architecture keep the hosting costs bounded. Nothing is gated behind a payment.",
   },
   dashboard: {
     aiTitle: "AI security review",
@@ -148,9 +146,6 @@ export const en = {
     siteEmpty: "Waiting for an audit to start.",
     siteFailedTitle: "Check failed.",
     bannerDemo: "100% free · no accounts",
-    supportText:
-      "SecurVibe is free and independent. Donations cover the servers and keep it that way.",
-    supportCta: "Support the project",
     phaseScan: "Repository scan",
     phaseSite: "Production audit",
     footer:
@@ -176,7 +171,6 @@ export const en = {
   },
   footer: {
     tagline: "Real audits for AI-built SaaS.",
-    linksSupport: "Support the project",
     linksApp: "Run an audit",
     linksLegal: "Terms & privacy",
     demo: "Built with real data: GitHub, OSV.dev live HTTP checks.",
@@ -198,33 +192,11 @@ export const en = {
     contact: "Contact: {email}",
     note: "Template provided with SecurVibe — have it reviewed by a lawyer for full compliance in your jurisdiction.",
   },
-  support: {
-    title: "Free. Sustained by donations.",
-    intro:
-      "SecurVibe costs nothing: no account, no card, no subscription. Donations pay for the servers and keep the tool online — and free — for everyone.",
-    usageTitle: "Fair-use quotas",
-    usageNote:
-      "Fair-use quotas keep the service stable for all ({perMinute} audits per minute, {perDay} per day per network). Adding your own GitHub token makes repository scans faster.",
-    kofiTitle: "Ko-fi",
-    kofiText: "One-time or monthly support, in a few clicks.",
-    kofiCta: "Donate on Ko-fi",
-    paypalTitle: "PayPal",
-    paypalText: "Send a one-off donation directly.",
-    paypalCta: "Donate via PayPal",
-    closing: "No donation is too small. Thank you for keeping SecurVibe alive.",
-    statMinute: "Minute",
-    statDaily: "Day",
-    statGlobal: "Global",
-    statFiles: "Scan",
-    unitAudits: "audits / IP",
-    unitAuditsDay: "audits / day",
-    unitFiles: "files max",
-  },
 } as const;
 
 export type Dictionary = typeof en;
 
-// Flat keys typed automatically: "support.kofiTitle", "dashboard.start"…
+// Flat keys typed automatically: "meta.title", "dashboard.start"…
 type Flatten<T, Prefix extends string = ""> =
   T extends object
     ? {
