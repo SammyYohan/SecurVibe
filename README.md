@@ -1,12 +1,26 @@
 # SecurVibe
 
-**Real security audits for AI-built SaaS** — GitHub scanner + production audit, in ≈ 60 seconds, 100% free, no account.
-
 [![CI](https://github.com/SammyYohan/SecurVibe/actions/workflows/ci.yml/badge.svg)](https://github.com/SammyYohan/SecurVibe/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2d5a88.svg)](./LICENSE)
+[![Donate on Ko-fi](https://img.shields.io/badge/Donate-Ko--fi-29ABE0?logo=ko-fi&logoColor=white)](https://ko-fi.com/sammyyohan)
+[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/sammyyohan)
 
-> 🌍 Interface available in 8 languages: English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).
-> Audit findings and fixes are written in English — the security-tool standard — and are displayed in every locale.
+**Real security audits for AI-built SaaS** — GitHub scanner + production audit, in ≈ 60 seconds, 100% free, no account.
+
+🌍 **English** | [Français](./README.fr.md) | [Español](./README.es.md) | [Deutsch](./README.de.md) | [Português (BR)](./README.pt-br.md) | [日本語](./README.ja.md) | [简体中文](./README.zh-cn.md) | [العربية](./README.ar.md)
+
+> 🌐 Interface available in 8 languages: English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).
+> Audit findings and fixes are in English — the security-tool standard — and display in every locale.
+
+---
+
+## Why I built SecurVibe
+
+I'm **SammyYohan** — a former IT professional and developer who switched to vibe coding: building software hand-in-hand with AI. I live in Libreville, Gabon, and I'm currently between jobs — creating projects is what keeps me going. I'm passionate about AI, new technologies and gaming, and that mix is exactly where SecurVibe was born.
+
+The problem it solves: today everyone ships code written with AI, usually straight out of a chat window, with no tooling to check what comes out. Solid security tooling exists — CI platforms, SAST suites, enterprise dashboards — but it targets company budgets. For an indie dev (or someone between jobs like me), there was no free, no-signup, no-account way to answer one simple question: *"Is what my AI just built actually safe to ship?"*
+
+SecurVibe is that answer: real audits (secrets, vulnerable dependencies, TLS, security headers), a score, and a fix list made to be pasted into any coding agent — free for everyone.
 
 ---
 
@@ -164,6 +178,14 @@ Contributions are welcome:
 ## Forking
 
 Forking SecurVibe for your own deployment is exactly what the MIT license is for: keep the [`LICENSE`](./LICENSE) file, deploy your own instance, and stay 100% free for your users — no paywall mechanics are built in.
+
+---
+
+## Support my work
+
+SecurVibe is 100% free and will stay that way. If it saved you time — or you simply like what I build — you can support my work on [Ko-fi](https://ko-fi.com/sammyyohan) or [PayPal.me](https://paypal.me/sammyyohan).
+
+Every donation goes into hosting costs for this tool and the next free project. Completely optional: nothing is gated behind it, the tool is complete without it.
 
 ---
 

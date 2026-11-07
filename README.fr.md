@@ -1,14 +1,26 @@
 # SecurVibe
 
-**Audits de sécurité réels pour les SaaS créés avec l'IA** — scanner GitHub + audit de production, en ≈ 60 secondes, 100 % gratuit, sans compte.
-
 [![CI](https://github.com/SammyYohan/SecurVibe/actions/workflows/ci.yml/badge.svg)](https://github.com/SammyYohan/SecurVibe/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2d5a88.svg)](./LICENSE)
+[![Faire un don sur Ko-fi](https://img.shields.io/badge/Donate-Ko--fi-29ABE0?logo=ko-fi&logoColor=white)](https://ko-fi.com/sammyyohan)
+[![Faire un don via PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/sammyyohan)
 
-> 🌍 Interface disponible en 8 langues : English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).
+**Audits de sécurité réels pour les SaaS créés avec l'IA** — scanner GitHub + audit de production, en ≈ 60 secondes, 100 % gratuit, sans compte.
+
+🌍 [English](./README.md) | **Français** | [Español](./README.es.md) | [Deutsch](./README.de.md) | [Português (BR)](./README.pt-br.md) | [日本語](./README.ja.md) | [简体中文](./README.zh-cn.md) | [العربية](./README.ar.md)
+
+> 🌐 Interface disponible en 8 langues : English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).
 > Les rapports d'audit (constats, correctifs) sont rédigés en anglais — standard des outils de sécurité — et s'affichent dans toutes les langues.
 
-> ℹ️ Le README par défaut est en anglais ([`README.md`](./README.md)) ; cette traduction française est maintenue pour la communauté francophone.
+---
+
+## Pourquoi j'ai créé SecurVibe
+
+Je suis **SammyYohan** — anciennement informaticien et développeur, aujourd'hui converti au vibe coding : je construis des logiciels main dans la main avec l'IA. J'habite à Libreville, au Gabon, et je suis actuellement au chômage ; créer des projets est ce qui me fait avancer. Je suis passionné d'IA, de nouvelles technologies et de gaming — et c'est exactement de ce mélange qu'est né SecurVibe.
+
+Le problème qu'il résout : aujourd'hui, tout le monde code avec l'IA, le plus souvent depuis une fenêtre de chat, sans aucun outil pour vérifier ce qui sort. Les bons outils de sécurité existent — plateformes CI, suites SAST, dashboards d'entreprise — mais ils visent des budgets d'entreprise. Pour un dev indépendant (ou quelqu'un sans emploi comme moi), il n'existait pas de moyen gratuit, sans inscription ni compte, de répondre à une question toute simple : *« Ce que mon IA vient de construire, est-ce vraiment prêt à être déployé ? »*
+
+SecurVibe est la réponse : des audits réels (secrets, dépendances vulnérables, TLS, en-têtes de sécurité), un score, et une liste de correctifs prête à coller dans n'importe quel agent de code — gratuit pour tout le monde.
 
 ---
 
@@ -166,6 +178,14 @@ Les contributions sont bienvenues :
 ## Fork
 
 Forker SecurVibe pour votre propre déploiement est exactement ce que permet la licence MIT : conservez le fichier [`LICENSE`](./LICENSE), déployez votre propre instance et restez 100 % gratuit pour vos utilisateurs — aucune mécanique de paywall n'est intégrée.
+
+---
+
+## Soutenir mon travail
+
+SecurVibe est 100 % gratuit et le restera. Si l'outil vous a fait gagner du temps — ou si vous appréciez simplement ce que je construis — vous pouvez soutenir mon travail sur [Ko-fi](https://ko-fi.com/sammyyohan) ou [PayPal.me](https://paypal.me/sammyyohan).
+
+Chaque don finance l'hébergement de cet outil et le prochain projet gratuit. Ceci est totalement optionnel : rien n'est verrouillé derrière un paiement, l'outil est complet sans cela.
 
 ---
 
