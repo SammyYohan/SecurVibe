@@ -1,10 +1,10 @@
-/** Dictionnaire de référence (EN). Toutes les clés des autres langues
- * héritent du typage de ce module et retombent sur l'anglais si absentes. */
+/** Reference dictionary (EN). The other languages' keys inherit the
+ * typing of this module and fall back to English when absent. */
 export const en = {
   meta: {
-    siteName: "GuardVibe",
+    siteName: "SecurVibe",
     tagline: "Real security audits for AI-built SaaS",
-    title: "GuardVibe — Real security audits for AI-built SaaS",
+    title: "SecurVibe — Real security audits for AI-built SaaS",
     description:
       "Scan a GitHub repository and a production URL in about a minute: secrets, vulnerable dependencies, TLS and HTTP headers. Real data, no account required.",
   },
@@ -21,7 +21,7 @@ export const en = {
     title1: "Vibe-coded your SaaS?",
     title2: "Prove it is safe to buy from.",
     subtitle:
-      "GuardVibe audits a GitHub repository and a live production URL in about a minute: hardcoded secrets, vulnerable dependencies, missing security headers, weak TLS — with a score and fixes you can act on.",
+      "SecurVibe audits a GitHub repository and a live production URL in about a minute: hardcoded secrets, vulnerable dependencies, missing security headers, weak TLS — with a score and fixes you can act on.",
     ctaPrimary: "Run a free audit",
     ctaSecondary: "Support the project",
     note1: "No account required",
@@ -37,7 +37,7 @@ export const en = {
       "Copy the fix list into your coding assistant, fix the findings, then re-audit with one click — your score is saved in your browser so you can watch it climb.",
   },
   benefits: {
-    kicker: "Why GuardVibe",
+    kicker: "Why SecurVibe",
     title: "Real checks, not screenshots",
     b1title: "Real data, real rules",
     b1text:
@@ -81,8 +81,8 @@ export const en = {
   },
   compare: {
     kicker: "Comparison",
-    title: "GuardVibe vs. traditional security tools",
-    colGuard: "GuardVibe",
+    title: "SecurVibe vs. traditional security tools",
+    colGuard: "SecurVibe",
     colOthers: "Traditional tools",
     r1: "First report", v1g: "≈ 60 seconds", v1o: "Setup, agents, sales calls",
     r2: "Account required", v2g: "No", v2o: "Yes",
@@ -91,7 +91,7 @@ export const en = {
     r5: "Interface languages", v5g: "8", v5o: "Usually 1–2",
     r6: "Data kept by the service", v6g: "Nothing stored server-side", v6o: "Full audit history, billing data",
     r7: "Fix guidance", v7g: "Per finding, copy-pasteable", v7o: "Varies",
-    note: "Traditional tools remain excellent for continuous enterprise security. GuardVibe is the fast, free first pass for AI-built products and small teams.",
+    note: "Traditional tools remain excellent for continuous enterprise security. SecurVibe is the fast, free first pass for AI-built products and small teams.",
   },
   faq: {
     kicker: "FAQ",
@@ -104,7 +104,7 @@ export const en = {
     a3: "Only what you are allowed to: your own repositories, or ones with explicit permission. Public repositories work out of the box; private ones need your own fine-grained token.",
     q4: "Why do I see a rate limit?",
     a4: "Without a token, GitHub allows anonymous reads per IP (used by everyone scanning without a token). Adding your own token in the app removes this ceiling — it also speeds up scans.",
-    q5: "How does GuardVibe stay free?",
+    q5: "How does SecurVibe stay free?",
     a5: "It is entirely free, sustained by voluntary donations (Ko-fi, PayPal) and fair-use quotas that keep costs bounded. Nothing is gated behind a payment.",
   },
   dashboard: {
@@ -124,7 +124,6 @@ export const en = {
     start: "Run the audit",
     running: "Audit running…",
     cancel: "Cancel",
-    trySample: "Try with an example",
     progressLabel: "Overall audit progress",
     scoreLabel: "Health score",
     partial: "(partial)",
@@ -150,16 +149,16 @@ export const en = {
     siteFailedTitle: "Check failed.",
     bannerDemo: "100% free · no accounts",
     supportText:
-      "GuardVibe is free and independent. Donations cover the servers and keep it that way.",
+      "SecurVibe is free and independent. Donations cover the servers and keep it that way.",
     supportCta: "Support the project",
     phaseScan: "Repository scan",
     phaseSite: "Production audit",
     footer:
-      "GuardVibe. Only scan repositories and sites you own or are explicitly allowed to audit.",
+      "SecurVibe. Only scan repositories and sites you own or are explicitly allowed to audit.",
     errorTitle: "An error occurred",
     errorRetry: "Retry",
     errorBody:
-      "GuardVibe could not display this page. You can retry: your data stays local, nothing was sent.",
+      "SecurVibe could not display this page. You can retry: your data stays local, nothing was sent.",
     streamInterrupted:
       "The audit stream ended before completion. Retry — nothing left your browser.",
     findTitle: "Results of the audit",
@@ -181,7 +180,7 @@ export const en = {
     linksApp: "Run an audit",
     linksLegal: "Terms & privacy",
     demo: "Built with real data: GitHub, OSV.dev live HTTP checks.",
-    rights: "© {year} GuardVibe. Use responsibly: only audit what you own or are allowed to.",
+    rights: "© {year} SecurVibe. Use responsibly: only audit what you own or are allowed to.",
   },
   legal: {
     title: "Terms & privacy",
@@ -197,12 +196,12 @@ export const en = {
     p3: "Standard hosting logs (IP address, HTTP status) may be processed for security and rate limiting by the hosting provider (see their policy) for a limited time.",
     p4: "For any data question, contact us via the app footer address.",
     contact: "Contact: {email}",
-    note: "Template provided with GuardVibe — have it reviewed by a lawyer for full compliance in your jurisdiction.",
+    note: "Template provided with SecurVibe — have it reviewed by a lawyer for full compliance in your jurisdiction.",
   },
   support: {
     title: "Free. Sustained by donations.",
     intro:
-      "GuardVibe costs nothing: no account, no card, no subscription. Donations pay for the servers and keep the tool online — and free — for everyone.",
+      "SecurVibe costs nothing: no account, no card, no subscription. Donations pay for the servers and keep the tool online — and free — for everyone.",
     usageTitle: "Fair-use quotas",
     usageNote:
       "Fair-use quotas keep the service stable for all ({perMinute} audits per minute, {perDay} per day per network). Adding your own GitHub token makes repository scans faster.",
@@ -212,13 +211,20 @@ export const en = {
     paypalTitle: "PayPal",
     paypalText: "Send a one-off donation directly.",
     paypalCta: "Donate via PayPal",
-    closing: "No donation is too small. Thank you for keeping GuardVibe alive.",
+    closing: "No donation is too small. Thank you for keeping SecurVibe alive.",
+    statMinute: "Minute",
+    statDaily: "Day",
+    statGlobal: "Global",
+    statFiles: "Scan",
+    unitAudits: "audits / IP",
+    unitAuditsDay: "audits / day",
+    unitFiles: "files max",
   },
 } as const;
 
 export type Dictionary = typeof en;
 
-// Clés à plat typées automatiquement: "support.kofiTitle", "dashboard.start"…
+// Flat keys typed automatically: "support.kofiTitle", "dashboard.start"…
 type Flatten<T, Prefix extends string = ""> =
   T extends object
     ? {

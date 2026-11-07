@@ -11,11 +11,11 @@ import { ar } from "@/lib/i18n/dictionaries/ar";
 type PartialPack = Partial<Record<FlatKey, string>>;
 
 const PACKS: Record<Locale, PartialPack> = {
-  en: {}, // base: l'anglais contient déjà toutes les valeurs
+  en: {}, // base: English already contains every value
   fr, es, de, "pt-br": ptBr, ja, "zh-cn": zhCn, ar,
 };
 
-/** Aplatit le dictionnaire imbriqué en paires "a.b.c" -> texte. */
+/** Flattens the nested dictionary into "a.b.c" -> text pairs. */
 function flatten(node: unknown, prefix: string, output: Map<string, string>): void {
   if (typeof node !== "object" || node === null) return;
   const entries = Object.entries(node) as Array<[string, unknown]>;
@@ -42,7 +42,7 @@ const PACK_FLATS: Record<Locale, Map<string, string>> = Object.fromEntries(
 
 export type Translator = (path: FlatKey, vars?: Record<string, string | number>) => string;
 
-/** Traducteur mergé: clé locale d'abord, puis repli EN, puis la clé brute. */
+/** Merged translator: locale key first, then EN fallback, then the raw key. */
 export function createTranslator(locale: Locale): Translator {
   const flat = PACK_FLATS[locale];
   return (path, vars) => {
@@ -56,7 +56,7 @@ export function createTranslator(locale: Locale): Translator {
   };
 }
 
-/** Textes aplatissérie de la locale, disponibles côté client via props. */
+/** Flattened texts of the locale, available client-side via props. */
 export function getDictionarySnapshot(locale: Locale): Record<string, string> {
   const flat = PACK_FLATS[locale];
   const merged = new Map<string, string>();

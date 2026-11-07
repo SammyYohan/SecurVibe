@@ -22,7 +22,7 @@ const I18nContext = createContext<I18nValue | null>(null);
 
 export type I18nProviderProps = {
   locale: Locale;
-  /** Record aplati "chemin.clé" -> texte, pré-mergé côté serveur (EN inclus). */
+  /** Flattened record "path.key" -> text, pre-merged server-side (EN included). */
   snapshot: Record<string, string>;
   children: ReactNode;
 };

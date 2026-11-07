@@ -42,16 +42,16 @@ const SEVERITY_BADGE_VARIANT: Record<Severity, BadgeVariant> = {
 };
 
 /**
- * Génère la liste de correctifs à coller dans l'assistant de code de
- * l'utilisateur (Cursor, Claude Code, Copilot…). Les contrôles réussis
- * (OK) sont volontairement exclus : rien à corriger.
+ * Builds the fix list to paste into the user's coding assistant
+ * (Cursor, Claude Code, Copilot…). Successful checks (OK) are
+ * deliberately excluded: nothing to fix.
  */
 export function buildFixListMarkdown(
   critical: readonly Finding[],
   warning: readonly Finding[],
 ): string {
   const lines: string[] = [
-    "# Security fix checklist (GuardVibe audit)",
+    "# Security fix checklist (SecurVibe audit)",
     "",
     "Generated from a real scan. Fix each item with your AI coding assistant (Cursor, Claude Code, Copilot…), then re-run the audit to verify.",
   ];
@@ -71,7 +71,7 @@ export function buildFixListMarkdown(
   return lines.join("\n");
 }
 
-/** Clipboard API quand disponible (contexte sécurisé), repli executCommand. */
+/** Clipboard API when available (secure context), execCommand fallback. */
 async function copyTextToClipboard(text: string): Promise<boolean> {
   if (
     typeof navigator !== "undefined" &&
@@ -81,7 +81,7 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // On tente le repli ci-dessous.
+      // Try the fallback below.
     }
   }
   try {

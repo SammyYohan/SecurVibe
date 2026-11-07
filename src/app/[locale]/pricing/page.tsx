@@ -6,9 +6,9 @@ export type PricingPageProps = {
   params: Promise<{ locale: string }>;
 };
 
-/**
- * GuardVibe est 100 % gratuit : la page de tarification est remplacée
- * par la page de soutien / dons (/support). Redirection permanente.
+/*
+ * SecurVibe is 100% free: the pricing page is replaced by the
+ * support / donation page (/support). Permanent redirect.
  */
 export default async function PricingPage({ params }: PricingPageProps) {
   const { locale: candidate } = await params;

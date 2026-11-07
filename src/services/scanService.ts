@@ -15,21 +15,21 @@ import { queryVulnerabilities, type DependencyRef } from "@/services/vulnClient"
 import type { Finding, ProgressRange, ScanEvent, Severity } from "@/types";
 
 /**
- * Scan RÉEL d'un dépôt GitHub :
- *  1. existence + arborescence via l'API github.com (1 à 2 requêtes de quota) ;
- *  2. lecture des fichiers via raw.githubusercontent.com, avec le token
- *     pour les dépôts privés (repli API GitHub si le raw refuse) ;
- *  3. détection de secrets par règles, fichiers à risque en premier
- *     (.env, workflows, auth), plusieurs constats par fichier ;
- *  4. hygiène (.env commité, .gitignore, lockfile, CI, hachage) ;
- *  5. vulnérabilités connues via OSV.dev sur les versions du lockfile.
- * En cas d'annulation, le générateur se termine silencieusement.
+ * Real scan of a GitHub repository:
+ *  1. existence + tree via the github.com API (1 to 2 quota requests);
+ *  2. file reads via raw.githubusercontent.com, with the token
+ *     for private repositories (GitHub API fallback if raw refuses);
+ *  3. rule-based secret detection, risky files first
+ *     (.env, workflows, auth), several findings per file;
+ *  4. hygiene (committed .env, .gitignore, lockfile, CI, hashing);
+ *  5. known vulnerabilities via OSV.dev on lockfile versions.
+ * On cancellation, the generator ends silently.
  */
 
 export type ScanInput = {
   repoUrl: string;
   githubToken?: string;
-  /** Plafond de fichiers du plan ; absent = plafond gratuit. */
+  /** File cap for the plan; absent = free-tier cap. */
   maxFiles?: number;
 };
 
@@ -567,7 +567,7 @@ function needsLocalPasswordHash(names: readonly string[]): boolean {
 const GITHUB_HEADERS: Record<string, string> = {
   Accept: "application/vnd.github+json",
   "X-GitHub-Api-Version": "2022-11-28",
-  "User-Agent": "guardvibe-scan",
+  "User-Agent": "securvibe-scan",
 };
 
 const TOKEN_SHAPES: readonly RegExp[] = [
@@ -642,7 +642,7 @@ async function fetchText(
     if (accept !== undefined) {
       headers.Accept = accept;
       headers["X-GitHub-Api-Version"] = "2022-11-28";
-      headers["User-Agent"] = "guardvibe-scan";
+      headers["User-Agent"] = "securvibe-scan";
     }
     const response = await fetch(url, {
       headers,

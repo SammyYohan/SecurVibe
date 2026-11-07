@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { DEFAULT_LOCALE, LOCALES } from "@/lib/i18n/config";
 
-/** Redirige vers la locale préférée de l'utilisateur (Accept-Language). */
+/** Redirect to the user's preferred locale (Accept-Language). */
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 

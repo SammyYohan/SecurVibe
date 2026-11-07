@@ -10,21 +10,20 @@ import {
 import { consumeDailyAudit, rateLimit } from "@/lib/rateLimit";
 
 /**
- * Quota d'usage du service gratuit, pensé pour un hébergement serverless
- * (Vercel) où la mémoire d'une instance ne dure pas :
+ * Free-service usage quota, designed for serverless hosting (Vercel)
+ * where an instance's memory does not survive between requests:
  *
- *  1. garde-fou mémoire par instance (fenêtre minute) — instantané, protège
- *     l'instance même si le store partagé est lent ou absent ;
- *  2. store partagé Upstash Redis via son API REST (2 appels fetch, aucun
- *     SDK) : compteur minute par IP, compteur journalier par IP (clé datée
- *     UTC, reset à minuit) et plafond global journalier ;
- *  3. repli mémoire (quota journalier) quand Upstash n'est pas configuré ou
- *     injoignable — le service continue, la précision est moindre.
+ *  1. per-instance in-memory guardrail (minute window) — instantaneous,
+ *     protects the instance even when the shared store is slow or absent;
+ *  2. shared Upstash Redis store through its REST API (2 fetch calls,
+ *     no SDK): per-IP minute counter, per-IP daily counter (UTC-dated
+ *     key, resets at midnight UTC) and global daily ceiling;
+ *  3. in-memory fallback (daily quota) when Upstash is not configured
+ *     or unreachable — the service keeps running with lower accuracy.
  *
- * En cas d'erreur du store partagé, la décision est « fail-open » : mieux
- * vaut laisser passer un audit que couper le service entier. Les autres
- * protections (garde mémoire, plafond de concurrence, quotas GitHub)
- * restent actives.
+ * When the shared store fails, the decision is "fail-open": letting one
+ * audit through is better than cutting the whole service. The other
+ * guardrails (memory guard, concurrency cap, GitHub quotas) stay active.
  */
 
 export type QuotaReason = "minute" | "daily" | "global";
@@ -38,7 +37,7 @@ export type QuotaResult =
     };
 
 const RETRY_AFTER_MINUTE = 60;
-const DAY_TTL_MS = String(26 * 3600 * 1000); // marge au-delà de 24 h
+const DAY_TTL_MS = String(26 * 3600 * 1000); // margin beyond 24 h
 const UPSTASH_TIMEOUT_MS = 2_000;
 
 function secondsUntilNextUtcDay(now = new Date()): number {
@@ -50,7 +49,7 @@ function secondsUntilNextUtcDay(now = new Date()): number {
   return Math.max(60, Math.ceil((next - now.getTime()) / 1000));
 }
 
-/** Un pipeline Upstash : un aller-retour HTTP pour les 6 commandes. */
+/** One Upstash pipeline: a single HTTP round-trip for the 6 commands. */
 async function upstashPipeline(
   commands: Array<[string, string, ...string[]]>,
 ): Promise<Array<[unknown, unknown]> | null> {
@@ -82,19 +81,19 @@ async function upstashPipeline(
     return body as Array<[unknown, unknown]>;
   } catch (error) {
     console.error(
-      "[guardvibe] Shared quota store unavailable (fail-open).",
+      "[securvibe] Shared quota store unavailable (fail-open).",
       error instanceof Error ? error.name : typeof error,
     );
     return null;
   }
 }
 
-/** Fenêtre minute, quota journalier par IP et plafond global via Upstash. */
+/** Minute window, per-IP daily quota and global ceiling through Upstash. */
 async function redisCheck(ip: string): Promise<QuotaResult | null> {
   const day = new Date().toISOString().slice(0, 10); // UTC yyyy-mm-dd
-  const minuteKey = `gv:m:${ip}`;
-  const dailyKey = `gv:d:${day}:${ip}`;
-  const globalKey = `gv:g:${day}`;
+  const minuteKey = `sv:m:${ip}`;
+  const dailyKey = `sv:d:${day}:${ip}`;
+  const globalKey = `sv:g:${day}`;
 
   const results = await upstashPipeline([
     ["INCR", minuteKey],
@@ -135,9 +134,9 @@ async function redisCheck(ip: string): Promise<QuotaResult | null> {
   return { ok: true, store: "redis" };
 }
 
-/** Point d'entrée : consomme une place de quota ou refuse avec un motif. */
+/** Entry point: consumes one quota slot or rejects with a reason. */
 export async function checkDailyQuota(ip: string): Promise<QuotaResult> {
-  // L1 — mémoire locale : protège l'instance sans dépendance réseau.
+  // L1 — local memory: protects the instance with no network dependency.
   const localMinute = rateLimit(ip, AUDITS_PER_MINUTE);
   if (localMinute.ok === false) {
     return {
@@ -147,11 +146,11 @@ export async function checkDailyQuota(ip: string): Promise<QuotaResult> {
     };
   }
 
-  // L2 — store partagé (compteurs valables à travers les instances).
+  // L2 — shared store (counters valid across instances).
   const shared = await redisCheck(ip);
   if (shared !== null) return shared;
 
-  // Repli : sans store partagé, seuls les garde-fous mémoire s'appliquent.
+  // Fallback: without a shared store, only the memory guardrails apply.
   const localDaily = consumeDailyAudit(ip, AUDITS_PER_DAY);
   if (localDaily.ok === false) {
     return {
@@ -164,8 +163,8 @@ export async function checkDailyQuota(ip: string): Promise<QuotaResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Garde-fou de concurrence (par instance) : borne le nombre d'audits
-// exécutés en même temps pour que le trafic ne fasse pas crasher le service.
+// Concurrency guardrail (per instance): bounds the number of audits that
+// can run at the same time so a traffic spike cannot crash the service.
 // ---------------------------------------------------------------------------
 
 let inFlightAudits = 0;

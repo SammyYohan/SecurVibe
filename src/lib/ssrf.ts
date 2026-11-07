@@ -1,15 +1,15 @@
 /**
- * Requêtes HTTP sortantes durcies contre le SSRF.
+ * Outgoing HTTP requests hardened against SSRF.
  *
- * Chaque cible — l'URL initiale comme chaque redirection — est :
- *  1. validée syntaxiquement (HTTP/HTTPS, sans identifiants) ;
- *  2. résolue via DNS, et **toutes** ses adresses doivent être publiques ;
- *  3. contactée sur l'adresse IP validée (`hostname` = IP, `Host`/SNI = nom
- *     d'origine), donc pas de seconde résolution : le DNS rebinding est
- *     neutralisé entre la validation et la connexion.
+ * Each target — the initial URL as well as every redirect — is:
+ *  1. syntactically validated (HTTP/HTTPS, without credentials);
+ *  2. resolved via DNS, and **all** of its addresses must be public;
+ *  3. contacted on the validated IP address (`hostname` = IP, `Host`/SNI =
+ *     origin name), so there is no second resolution: DNS rebinding is
+ *     neutralized between validation and connection.
  *
- * Module strictement serveur (node:dns, node:http, node:https) : ne jamais
- * l'importer depuis un composant client.
+ * Strictly server-side module (node:dns, node:http, node:https): never
+ * import it from a client component.
  */
 
 import { lookup } from "node:dns/promises";
@@ -20,7 +20,7 @@ import { isPrivateAddress, isPrivateOrLocalHost } from "@/lib/validation";
 
 const MAX_REDIRECTS = 5;
 const REQUEST_TIMEOUT_MS = 8_000;
-const USER_AGENT = "guardvibe-audit";
+const USER_AGENT = "securvibe-audit";
 
 const BLOCKED_DETAIL =
   "Target blocked: private, loopback, link-local or otherwise non-public address.";
@@ -33,11 +33,11 @@ type Validation = ResolvedTarget | { detail: string };
 export type SafeResponse = {
   status: number;
   headers: Headers;
-  /** URL finale, après redirections. */
+  /** Final URL, after redirects. */
   finalUrl: string;
-  /** IP publique réellement contactée (réutilisable pour le contrôle TLS). */
+  /** Public IP actually contacted (reusable for the TLS check). */
   address: string;
-  /** URL finale si elle diffère de l'URL initiale et qu'elle est en HTTPS. */
+  /** Final URL if it differs from the initial URL and is HTTPS. */
   redirectedTo: string | null;
 };
 
@@ -68,7 +68,7 @@ function throwIfAborted(signal: AbortSignal): void {
   if (signal.aborted) throw createAbortError();
 }
 
-/** Valide une URL et renvoie son IP publique épinglée. */
+/** Validates a URL and returns its pinned public IP. */
 export async function validateTargetUrl(
   url: URL,
   signal: AbortSignal,
@@ -93,7 +93,7 @@ export async function validateTargetUrl(
   throwIfAborted(signal);
   if (addresses.length === 0) return { detail: "DNS resolution returned no address." };
 
-  // Une seule adresse privée suffit à refuser : le résolveur pourrait la choisir.
+  // One private address is enough to refuse: the resolver could pick it.
   for (const entry of addresses) {
     if (isPrivateAddress(entry.address)) return { detail: BLOCKED_DETAIL };
   }
@@ -103,7 +103,7 @@ export async function validateTargetUrl(
   return { url, address: chosen.address };
 }
 
-/** GET HTTP/HTTPS avec validation SSRF de la cible et de chaque redirection. */
+/** GET HTTP/HTTPS with SSRF validation of the target and each redirect. */
 export async function safeFetch(
   rawUrl: string,
   signal: AbortSignal,
@@ -152,7 +152,7 @@ export async function safeFetch(
       return { kind: "unreachable", detail: "Redirected to an invalid URL." };
     }
 
-    // Chaque saut est revalidé (protocole, IP littérale, DNS) avant toute requête.
+    // Each hop is revalidated (protocol, literal IP, DNS) before any request.
     const validated = await validateTargetUrl(next, signal);
     if ("detail" in validated) return { kind: "unreachable", detail: validated.detail };
     target = validated;
@@ -161,7 +161,7 @@ export async function safeFetch(
   return { kind: "unreachable", detail: "Too many redirects (max 5)." };
 }
 
-/** Une seule requête, sur l'IP déjà validée (Host et SNI restent le nom d'origine). */
+/** One request only, to the already-validated IP (Host and SNI keep the origin name). */
 async function probe(target: ResolvedTarget, signal: AbortSignal): Promise<Hop> {
   throwIfAborted(signal);
 
@@ -202,7 +202,7 @@ async function probe(target: ResolvedTarget, signal: AbortSignal): Promise<Hop> 
       const status = response.statusCode ?? 0;
       const location = response.headers.location ?? null;
       response.on("error", () => {
-        // Corps détruit volontairement : les en-têtes sont déjà lus.
+        // Body intentionally destroyed: the headers are already read.
       });
       response.destroy();
 

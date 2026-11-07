@@ -1,10 +1,10 @@
 import "server-only";
 
 /**
- * Limiteurs en mémoire (par instance, fenêtres glissantes).
- * Premier rideau anti-abus : instantanés, sans dépendance, valables même à
- * un seul utilisateur. À déployer multi-instance ou serverless, ils sont
- * complétés par le store partagé de `quota.ts` (Upstash Redis).
+ * In-memory rate limiters (per instance, sliding windows).
+ * First line of defense against abuse: instant, dependency-free, effective
+ * even for a single user. Once deployed multi-instance or serverless, they
+ * are complemented by the shared store in `quota.ts` (Upstash Redis).
  */
 type Bucket = { count: number; resetAt: number };
 
@@ -13,7 +13,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const buckets = new Map<string, Bucket>();
 const dailyBuckets = new Map<string, Bucket>();
 
-/** 12 requêtes/minute/IP par défaut. */
+/** 12 requests/minute/IP by default. */
 export function rateLimit(ip: string, limit = 12): { ok: boolean; retryAfterMs: number } {
   const now = Date.now();
   const bucket = buckets.get(ip);
@@ -30,9 +30,9 @@ export function rateLimit(ip: string, limit = 12): { ok: boolean; retryAfterMs: 
 }
 
 /**
- * Quota d'audits du plan gratuit, par IP et par fenêtre de 24 h.
- * En mémoire (par instance) : c'est un garde-fou d'usage loyal, pas une
- * comptabilité de facturation.
+ * Free-plan audit quota, per IP and per 24 h window.
+ * In memory (per instance): this is a fair-use guardrail, not billing
+ * accounting.
  */
 export function consumeDailyAudit(
   ip: string,
@@ -52,7 +52,7 @@ export function consumeDailyAudit(
   return { ok: true, retryAfterMs: 0 };
 }
 
-/** Nettoyage périodique léger pour éviter la croissance indéfinie. */
+/** Lightweight periodic cleanup to prevent unbounded growth. */
 export function pruneRateLimitBuckets(): void {
   const now = Date.now();
   for (const [ip, bucket] of buckets) {

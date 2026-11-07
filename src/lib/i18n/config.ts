@@ -5,7 +5,7 @@ export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 
 type LocaleMeta = {
-  /** BCP 47 pour Intl / <html lang>. */
+  /** BCP 47 for Intl / <html lang>. */
   tag: string;
   name: string;
   dir: "ltr" | "rtl";
@@ -26,7 +26,7 @@ export function isLocale(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);
 }
 
-/** Segment d'URL exact d'une locale ("pt-br"). */
+/** Exact URL segment of a locale ("pt-br"). */
 export function localeSegment(locale: Locale): string {
   return locale;
 }

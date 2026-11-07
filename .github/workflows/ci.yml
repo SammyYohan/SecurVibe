@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        # La version de pnpm est lue depuis le champ packageManager de package.json.
+        # The pnpm version is read from the packageManager field of package.json.
 
       - uses: actions/setup-node@v4
         with:

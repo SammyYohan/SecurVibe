@@ -5,12 +5,12 @@ const WARNING_PENALTY = 5;
 const JOURNEY_FAILURE_PENALTY = 10;
 
 /**
- * Un seul constat critique interdit le palier « bon » (80+).
- * Une clé live ne doit pas s'afficher comme un dépôt sain.
+ * A single critical finding rules out the "good" tier (80+).
+ * A live key must not make the repository look healthy.
  */
 export const CRITICAL_SCORE_CAP = 79;
 
-/** Fonction pure : utilisée côté serveur (événement "done") et côté client (score provisoire). */
+/** Pure function: used on the server ("done" event) and on the client (provisional score). */
 export function computeScore(
   findings: readonly Finding[],
   journeyFailed: boolean,

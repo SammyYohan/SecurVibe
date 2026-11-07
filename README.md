@@ -1,47 +1,53 @@
-# GuardVibe
+# SecurVibe
 
-**Audits de sécurité réels pour les SaaS créés avec l'IA** — scanner GitHub + audit de production, en ≈ 60 secondes, 100 % gratuit, sans compte.
+**Real security audits for AI-built SaaS** — GitHub scanner + production audit, in ≈ 60 seconds, 100% free, no account.
 
-> 🌍 Interface disponible en 8 langues : English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).
-> Les rapports d'audit (constats, correctifs) sont rédigés en anglais — standard des outils de sécurité — et s'affichent dans tous les environnements linguistiques.
+[![CI](https://github.com/SammyYohan/GuardVibe/actions/workflows/ci.yml/badge.svg)](https://github.com/SammyYohan/GuardVibe/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2d5a88.svg)](./LICENSE)
+[![Donate on Ko-fi](https://img.shields.io/badge/Donate-Ko--fi-29ABE0?logo=ko-fi&logoColor=white)](https://ko-fi.com/sammyyohan)
+[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/sammyyohan)
+
+> 🌍 Interface available in 8 languages: English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).
+> Audit findings and fixes are written in English — the security-tool standard — and are displayed in every locale.
 
 ---
 
-## Fonctionnalités réelles (aucune simulation)
+## Real checks (no simulation)
 
-| Module | Ce qui est vérifié | Source de données |
+| Module | What is checked | Data source |
 | --- | --- | --- |
-| **Scanner de dépôt** | Secrets en dur (PAT GitHub, clés Stripe/OpenAI/Anthropic/Slack/GitLab, AWS, PEM privés, JWT signés, URLs de base de données), priorisation par risque, jusqu'à 200 fichiers | Contenu réel via `raw.githubusercontent.com` + repli API GitHub |
-| **Dépendances** | Avis CVE/GHSA réels avec niveau de gravité (OSV.dev) à partir des versions exactes résolues dans le lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) | [OSV.dev](https://osv.dev) (base publique gratuite, sans clé) |
-| **Hygiène** | `.env` commités, exclusion `.env*` dans `.gitignore`, lockfile, workflows CI, bibliothèques de hachage (bcrypt/argon2) | Arborescence + fichiers du dépôt |
-| **Audit de production** | Accessibilité HTTPS, redirection HTTP→HTTPS, certificat TLS (jours restants, handshake réel), 6 en-têtes de sécurité (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) | Requêtes HTTP + `tls.connect` vers l'URL soumise |
+| **Repository scanner** | Hard-coded secrets (GitHub PATs, Stripe/OpenAI/Anthropic/Slack/GitLab keys, AWS, PEM private keys, signed JWTs, database URLs), risk-based prioritization, up to 200 files | Real content via `raw.githubusercontent.com` + GitHub API fallback |
+| **Dependencies** | Real CVE/GHSA advisories with severity (OSV.dev) from the exact versions resolved in the lockfile (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`) | [OSV.dev](https://osv.dev) (public, free, no key) |
+| **Hygiene** | Committed `.env` files, `.env*` exclusion in `.gitignore`, lockfile, CI workflows, password-hashing libraries (bcrypt/argon2) | Repository tree + files |
+| **Production audit** | HTTPS reachability, HTTP→HTTPS redirect, TLS certificate (days remaining, real handshake), 6 security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) | HTTP requests + `tls.connect` to the submitted URL |
 
-**Score** : `100 − 15 × critiques − 5 × avertissements − 10 × (échec de l'étape décisive de l'audit de production)`. Un constat critique plafonne le score à 79. Chaque constat embarque une explication et un correctif copier-collable.
+**Score**: `100 − 15 × critical − 5 × warning − 10 × (decisive production-audit step failure)`. A critical finding caps the score at 79. Every finding carries an explanation and a copy-paste fix.
 
-### Boucle de correction (100 % côté navigateur)
+### Fix loop (100% in the browser)
 
-1. **« Copier la liste de correctifs (Markdown) »** — checklist prête à coller dans Cursor / Claude Code / Copilot : chaque constat devient `- [ ]` avec son correctif, puis on ré-audite pour vérifier.
-2. **Tendance locale** — le score est comparé à l'audit précédent **sur la même cible** (repo + URL de production) : `↗ +X` / `↘ −X` / `=`. Historique dans `localStorage` (50 derniers audits, aucune donnée serveur, jamais le jeton).
-3. **« Ré-auditer après corrections »** — relance en un clic la même cible avec les mêmes paramètres.
+1. **"Copy the AI instruction"** (optional) — an LLM review (via [OpenRouter](https://openrouter.ai)) turns the findings into a clear analysis and one copy-paste instruction for your coding agent.
+2. **"Copy the fix list (Markdown)"** — a ready-to-paste checklist for Cursor / Claude Code / Copilot: each finding becomes a `- [ ]` item with its fix, then re-audit to verify.
+3. **Local trend** — the score is compared with the previous audit **on the same target** (repo + production URL): `↗ +X` / `↘ −X` / `=`. History lives in `localStorage` (last 50 audits, no server data, never the token).
+4. **"Re-audit after fixes"** — one click re-runs the same target with the same parameters.
 
 ---
 
 ## Stack
 
-> 🎨 Le système de design (palette, typographie, composants) est documenté dans [`DESIGN.md`](./DESIGN.md).
+> 🎨 The design system (palette, typography, components) is documented in [`DESIGN.md`](./DESIGN.md).
 
 - **Next.js 16** (App Router, RSC), **React 19**, **TypeScript strict**
-- **Tailwind CSS v4**, lucide-react, composants UI maison (sans bibliothèque externe lourde)
-- **zod** pour tous les contrats (schémas partagés client/serveur)
-- Streaming **NDJSON** avec annulation propagée (`AbortSignal`/`AbortSignal.any`)
-- Aucune base de données, aucun compte, aucun stockage serveur
-- Quotas gérés via **Upstash Redis** (API REST stateless) avec repli mémoire automatique
-- pnpm uniquement (Node ≥ 20.9)
+- **Tailwind CSS v4**, lucide-react, in-house UI components (no heavy external library)
+- **zod** for every contract (schemas shared client/server)
+- **NDJSON** streaming with propagated cancellation (`AbortSignal`/`AbortSignal.any`)
+- No database, no account, no server-side storage
+- Quotas via **Upstash Redis** (stateless REST API) with automatic in-memory fallback
+- pnpm only (Node ≥ 20.9)
 
 ```bash
 corepack enable && corepack prepare pnpm@latest --activate
 pnpm install
-pnpm dev          # développement
+pnpm dev          # development
 pnpm build && pnpm start
 pnpm lint && pnpm typecheck
 ```
@@ -54,86 +60,123 @@ pnpm lint && pnpm typecheck
 src/
 ├── app/
 │   ├── [locale]/
-│   │   ├── layout.tsx          ← layout racine (lang/dir RTL, SEO hreflang)
-│   │   ├── page.tsx            ← landing (hero, bénéfices, comparatif, FAQ)
-│   │   ├── support/page.tsx    ← soutien au projet (dons Ko-fi / PayPal & quotas)
-│   │   ├── pricing/page.tsx    ← redirection permanente vers /support
-│   │   ├── legal/page.tsx      ← CGU & confidentialité
+│   │   ├── layout.tsx          ← root layout (lang/dir RTL, hreflang SEO)
+│   │   ├── page.tsx            ← landing (hero, benefits, comparison, FAQ)
+│   │   ├── support/page.tsx    ← support the project (Ko-fi / PayPal donations & quotas)
+│   │   ├── pricing/page.tsx    ← permanent redirect to /support (product is free)
+│   │   ├── legal/page.tsx      ← terms & privacy
 │   │   ├── app/page.tsx        ← dashboard (scanner)
-│   │   ├── error.tsx           ← frontière d'erreur localisée
+│   │   ├── error.tsx           ← localized error boundary
 │   │   └── not-found.tsx
-│   ├── api/scan/route.ts       ← POST streaming NDJSON (réel, quotas, slots)
+│   ├── api/scan/route.ts       ← POST NDJSON streaming (real, quotas, slots)
+│   ├── api/ai-analysis/route.ts← POST optional AI review (OpenRouter)
 │   └── globals.css
 ├── components/
-│   ├── dashboard/              ← Dashboard, ScanForm (+ sample), ScanStatus,
-│   │                             SecurityReport, SiteAuditPanel
+│   ├── dashboard/              ← Dashboard, ScanForm, ScanStatus, SecurityReport,
+│   │                             SiteAuditPanel
 │   ├── site/                   ← LocaleSwitcher, SiteFooter, Logo, SectionHeading
-│   └── ui/                     ← primitives maison (Button, Badge, Card, Input...)
+│   └── ui/                     ← in-house primitives (Button, Badge, Card, Input…)
 ├── lib/
-│   ├── i18n/                   ← config locales, 8 dictionnaires typés, moteur
-│   ├── env.ts                  ← variables serveur validées (zod)
-│   ├── validation.ts           ← schémas de requête partagés (zod)
-│   ├── score.ts                ← formule du score (plafond à 79 en cas de critique)
-│   ├── rateLimit.ts            ← limiteur en mémoire par instance
-│   ├── quota.ts                ← quotas partagés Upstash Redis + repli mémoire
-│   ├── lockfile.ts             ← résolveur de versions npm, pnpm et yarn lock
-│   ├── secrets.ts              ← règles de détection de secrets & conseils
-│   ├── ssrf.ts                 ← validation d'URL anti-SSRF (DNS, IPs privées)
-│   └── plans.ts                ← constantes de quotas et limites d'audit
+│   ├── i18n/                   ← locale config, 8 typed dictionaries, engine
+│   ├── env.ts                  ← validated server variables (zod)
+│   ├── validation.ts           ← shared request schemas (zod)
+│   ├── score.ts                ← score formula (capped at 79 on critical)
+│   ├── rateLimit.ts            ← per-instance in-memory limiter
+│   ├── quota.ts                ← shared Upstash Redis quotas + memory fallback
+│   ├── lockfile.ts             ← npm/pnpm/yarn lock version resolver
+│   ├── secrets.ts              ← secret detection rules & guidance
+│   ├── ssrf.ts                 ← anti-SSRF URL validation (DNS, private IPs)
+│   └── plans.ts                ← quota constants and audit limits
 ├── services/
-│   ├── scanService.ts          ← scanner dépôt (GitHub raw + règles + OSV.dev)
-│   ├── siteService.ts          ← audit production (HTTPS, TLS, headers)
-│   └── vulnClient.ts           ← client OSV.dev (batch + sévérité)
-├── types/index.ts              ← contrats zod (ScanEvent, Finding, TestStep…)
-└── proxy.ts                    ← redirection négociée par Accept-Language (Next 16)
+│   ├── scanService.ts          ← repository scanner (GitHub raw + rules + OSV.dev)
+│   ├── siteService.ts          ← production audit (HTTPS, TLS, headers)
+│   └── vulnClient.ts           ← OSV.dev client (batch + severity)
+├── types/index.ts              ← zod contracts (ScanEvent, Finding, TestStep…)
+└── proxy.ts                    ← Accept-Language negotiated redirect (Next 16)
 ```
 
 ---
 
-## Modèle économique & Quotas d'usage loyal
+## Business model & fair-use quotas
 
-GuardVibe est **100 % gratuit, sans inscription et sans publicité**.
+SecurVibe is **100% free — no signup, no ads, no telemetry**.
 
-Le maintien du service est soutenu par des **dons volontaires** (Ko-fi, PayPal). Des quotas d'usage loyal protègent l'infrastructure et garantissent la disponibilité pour tous :
+Running the service is funded by **voluntary donations** (Ko-fi, PayPal). Fair-use quotas protect the infrastructure and keep it available for everyone:
 
-| Quota | Limite | Description |
+| Quota | Limit | Description |
 | --- | --- | --- |
-| **Par minute** | 6 audits | Fenêtre glissante par IP (anti-rafales) |
-| **Par jour** | 30 audits | Par IP et par tranche UTC de 24 h |
-| **Plafond global** | 1 000 audits | Par jour pour l'ensemble du service |
-| **Concurrence** | 3 simultanés | Par instance de serveur (garde-fou mémoire/CPU) |
-| **Profondeur** | 200 fichiers | Par audit de dépôt GitHub |
+| **Per minute** | 6 audits | Sliding window per IP (burst protection) |
+| **Per day** | 30 audits | Per IP, per UTC 24 h slice |
+| **Global ceiling** | 1,000 audits | Per day for the whole service |
+| **Concurrency** | 3 simultaneous | Per server instance (memory/CPU guardrail) |
+| **Depth** | 200 files | Per GitHub repository audit |
 
-Les quotas sont vérifiés via Upstash Redis (API REST pipeline) et basculent automatiquement en mémoire locale si le store est indisponible (principe « fail-open »).
+Quotas are checked through Upstash Redis (REST pipeline, keys prefixed `sv:`) and automatically fall back to local memory when the store is unreachable ("fail-open").
 
 ---
 
 ## Configuration
 
-Toutes les variables sont **optionnelles** (voir `.env.example`) :
+Every variable is **optional** (see [`.env.example`](./.env.example)):
 
-- `GITHUB_TOKEN` — quota serveur 60→5000 requêtes/h quand l'utilisateur ne fournit pas le sien ;
-- `UPSTASH_REDIS_REST_URL` & `UPSTASH_REDIS_REST_TOKEN` — store partagé des quotas (Upstash) ;
-- `NEXT_PUBLIC_KOFI_URL` & `NEXT_PUBLIC_PAYPAL_URL` — liens de dons pour la page `/support` ;
-- `NEXT_PUBLIC_SITE_URL` — URL canonique + hreflang ;
-- `CONTACT_EMAIL` — adresse de contact affichée sur la page légale.
+| Variable | Purpose |
+| --- | --- |
+| `GITHUB_TOKEN` | Server-side quota 60→5,000 requests/h when the user does not provide their own |
+| `UPSTASH_REDIS_REST_URL` & `UPSTASH_REDIS_REST_TOKEN` | Shared quota store (Upstash, REST API) |
+| `OPENROUTER_API_KEY` | Optional: enables the "Analyze with AI" review in the report |
+| `OPENROUTER_MODEL` | Optional: review model (default: `openai/gpt-4o-mini`) |
+| `NEXT_PUBLIC_KOFI_URL` & `NEXT_PUBLIC_PAYPAL_URL` | Donation links for the `/support` page |
+| `NEXT_PUBLIC_SITE_URL` | Canonical URL + hreflang (also OpenRouter's `HTTP-Referer`) |
+| `CONTACT_EMAIL` | Contact address shown on the legal page |
 
-**Token utilisateur** : champ optionnel dans le formulaire de scan, transmis pour la requête courante uniquement, jamais stocké côté serveur ni client.
-
----
-
-## Sécurité du produit
-
-- Protection **anti-SSRF stricte** (`ssrf.ts`) : vérification des résolutions DNS, blocage des plages privées (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, link-local, multicast, cloud metadata IPv4/IPv6).
-- Validation stricte **avant** tout streaming (JSON 400 sans fuite de stack trace).
-- Toutes les variables d'environnement lues via schéma zod ; secrets jamais exposés via `NEXT_PUBLIC_`.
-- Limiteurs en couches (minute, jour, concurrence, global).
-- Annulation propre des flux via `AbortSignal`.
+**User token**: optional field in the scan form, forwarded for the current request only, never stored server-side or client-side.
 
 ---
 
-## Déploiement
+## Product security
 
-1. `pnpm build` (pages pré-générées statiquement pour les 8 langues).
-2. Renseigner les variables d'environnement optionnelles sur votre hébergeur (Vercel, Node, etc.).
-3. Tout est prêt : i18n, SEO (hreflang + canonique), anti-SSRF, streaming NDJSON.
+- **Strict anti-SSRF protection** (`ssrf.ts`): DNS resolution checks, private ranges blocked (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, link-local, multicast, cloud metadata IPv4/IPv6), pinned-IP connections to neutralize DNS rebinding.
+- Strict validation **before** any streaming (JSON 400 without stack-trace leaks).
+- All environment variables read through a zod schema; secrets never exposed via `NEXT_PUBLIC_`.
+- Layered limiters (minute, day, concurrency, global).
+- Clean stream cancellation via `AbortSignal`.
+
+---
+
+## Deployment (Vercel + Upstash)
+
+1. `pnpm build` (pages statically pre-generated for the 8 locales).
+2. Set the optional environment variables on your host (Vercel or Node).
+3. For shared quotas: [Upstash](https://upstash.com) → create a Redis database (REST enabled) → copy `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+4. Everything is ready: i18n, SEO (hreflang + canonical), anti-SSRF, NDJSON streaming (`maxDuration = 60` is set for `/api/scan`).
+
+---
+
+## Contributing
+
+Contributions are welcome:
+
+1. Fork and create a branch from `main`.
+2. `pnpm install` (Node ≥ 20.9, pnpm via corepack).
+3. `pnpm dev` for the local app — `/en/app` is the dashboard.
+4. Keep the CI green: `pnpm typecheck && pnpm lint && pnpm build` (runs on every push/PR — see `.github/workflows/ci.yml`).
+5. Comments are written in English; user-facing strings go through the 8 dictionaries in `src/lib/i18n/dictionaries/`.
+6. Open a PR with a clear description.
+
+---
+
+## Forking & keeping it free
+
+Forking SecurVibe for your own deployment is exactly what the MIT license is for:
+
+1. Keep the [`LICENSE`](./LICENSE) file.
+2. Replace the placeholders in [`.github/FUNDING.yml`](./.github/FUNDING.yml) and in the badges above with **your own** Ko-fi / PayPal accounts.
+3. Set `NEXT_PUBLIC_KOFI_URL` / `NEXT_PUBLIC_PAYPAL_URL` so your instance's `/support` page links to your accounts.
+
+If you deployed your own instance but still use this project's docs, issues, or ideas, contributing donations or code upstream keeps the original alive — no donation is too small.
+
+---
+
+## License
+
+[MIT](./LICENSE) — free to use, modify, and redistribute.

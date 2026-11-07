@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 const DEFAULT_DURATION_MS = 800;
 
 /**
- * Anime un nombre (count-up) sur ~800 ms via requestAnimationFrame.
- * Désactivé automatiquement si l'utilisateur préfère réduire les animations.
+ * Animates a number (count-up) over ~800 ms via requestAnimationFrame.
+ * Automatically disabled when the user prefers reduced motion.
  */
 export function useAnimatedNumber(
   target: number,
@@ -20,8 +20,8 @@ export function useAnimatedNumber(
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    // Animations réduites : aligner la valeur affichée sur la cible,
-    // dans un callback asynchrone (jamais setState de façon synchrone ici).
+    // Reduced motion: snap the displayed value to the target,
+    // inside an async callback (never call setState synchronously here).
     if (reduceMotion || durationMs <= 0) {
       const frame = requestAnimationFrame(() => {
         currentRef.current = target;

@@ -1,7 +1,7 @@
 /**
- * Résout les versions npm réellement installées.
- * Le `package.json` porte souvent des plages (`^`, `~`) : les avis OSV
- * ne sont fiables que sur la version exacte du lockfile.
+ * Resolves the npm versions actually installed.
+ * The `package.json` often carries ranges (`^`, `~`): OSV advisories
+ * are only reliable for the exact lockfile version.
  */
 
 export type LockKind = "npm" | "pnpm" | "yarn";
@@ -14,7 +14,7 @@ export type ResolvedPackage = {
 
 export type ResolveResult = {
   packages: ResolvedPackage[];
-  /** Dépendances directes restées sans version exacte. */
+  /** Direct dependencies left without an exact version. */
   unresolvedDirect: number;
   lockfileUsed: boolean;
   lockfileBroken: boolean;

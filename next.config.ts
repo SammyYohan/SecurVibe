@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Appliqué à toutes les routes de l'application.
+        // Applied to all application routes.
         source: "/:path*",
         headers: securityHeaders,
       },

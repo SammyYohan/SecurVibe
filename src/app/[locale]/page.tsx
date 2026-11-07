@@ -30,8 +30,8 @@ export default async function LandingPage({ params }: LandingPageProps) {
   const t = createTranslator(locale);
   const base = `/${locale}`;
 
-  // Les étiquettes techniques (secrets, .env, TLS…) sont du vocabulaire
-  // de développeur : volontairement identiques dans toutes les langues.
+  // Technical labels (secrets, .env, TLS…) are developer vocabulary:
+  // intentionally kept identical in every language.
   const features: Array<{ tag: string; tone: Tone; title: string; text: string }> = [
     { tag: "secrets", tone: "alert", title: t("features.f1"), text: t("features.f1d") },
     { tag: "OSV.dev", tone: "warn", title: t("features.f2"), text: t("features.f2d") },
@@ -121,7 +121,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
           </ul>
         </div>
 
-        {/* Aperçu illustratif du rapport (maquette statique honnête). */}
+        {/* Illustrative report preview (honest static mock-up). */}
         <aside
           aria-label={t("hero.previewLabel")}
           className="rounded-2xl border border-line bg-card p-7 shadow-card"
@@ -167,7 +167,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
         </aside>
       </section>
 
-      {/* ---------------------------- BÉNÉFICES ----------------------------- */}
+      {/* ---------------------------- BENEFITS ----------------------------- */}
       <section className="border-t border-line py-20" aria-labelledby="benefits-title">
         <SectionHeading id="benefits-title" kicker={t("benefits.kicker")} title={t("benefits.title")} />
         <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -183,7 +183,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ------------------------------ ÉTAPES ------------------------------ */}
+      {/* ------------------------------ STEPS ------------------------------ */}
       <section className="border-t border-line py-20" aria-labelledby="how-title">
         <SectionHeading id="how-title" kicker={t("how.kicker")} title={t("how.title")} />
         <ol className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -199,7 +199,7 @@ export default async function LandingPage({ params }: LandingPageProps) {
         </ol>
       </section>
 
-      {/* --------------------------- FONCTIONNALITÉS ------------------------- */}
+      {/* --------------------------- FEATURES ------------------------- */}
       <section id="features" className="scroll-mt-6 border-t border-line py-20" aria-labelledby="features-title">
         <SectionHeading id="features-title" kicker={t("features.kicker")} title={t("features.title")} />
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

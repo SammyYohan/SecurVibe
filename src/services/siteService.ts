@@ -11,12 +11,12 @@ import type {
 } from "@/types";
 
 /**
- * Audit RÉEL de l'URL de production (aucune simulation) :
- *  1. accessibilité HTTPS ;
- *  2. redirection HTTP → HTTPS ;
- *  3. certificat TLS (nature réelle via tls.connect) ;
- *  4. en-têtes de sécurité HTTP (CSP, HSTS, X-Frame-Options…).
- * Aucune connexion sortante autre que vers l'URL soumise par l'utilisateur.
+ * Real audit of the production URL (no simulation):
+ *  1. HTTPS reachability;
+ *  2. HTTP → HTTPS redirect;
+ *  3. TLS certificate (real inspection via tls.connect);
+ *  4. HTTP security headers (CSP, HSTS, X-Frame-Options…).
+ * No outbound connection other than to the URL submitted by the user.
  */
 
 export type SiteInput = { productionUrl: string };
@@ -45,12 +45,12 @@ export async function* runProductionAudit(
   try {
     const hostname = safeHostname(input.productionUrl);
 
-    // Les 4 étapes apparaissent immédiatement, en PENDING.
+    // The 4 steps appear immediately, as PENDING.
     for (let index = 1; index <= STEP_LABELS.length; index += 1) {
       yield { type: "test_step", step: buildStep(index, "PENDING") };
     }
 
-    // ---- Étape 1: accessibilité HTTPS ------------------------------------
+    // ---- Step 1: HTTPS reachability ------------------------------------
     yield { type: "test_step", step: buildStep(1, "RUNNING") };
     const probe = await safeFetch(input.productionUrl, signal);
     const response = probe.kind === "reachable" ? probe.response : null;
@@ -66,7 +66,7 @@ export async function* runProductionAudit(
     };
     yield { type: "progress", value: interpolate(range, 1, 4) };
 
-    // ---- Étape 2: redirection HTTP → HTTPS ---------------------------------
+    // ---- Step 2: HTTP → HTTPS redirect ---------------------------------
     yield { type: "test_step", step: buildStep(2, "RUNNING") };
     const httpProbe = await safeFetch(`http://${hostname}`, signal);
     const redirectTarget =
@@ -83,7 +83,7 @@ export async function* runProductionAudit(
     };
     yield { type: "progress", value: interpolate(range, 2, 4) };
 
-    // ---- Étape 3: certificat TLS --------------------------------------------
+    // ---- Step 3: TLS certificate --------------------------------------------
     yield { type: "test_step", step: buildStep(3, "RUNNING") };
     const certificate =
       response !== null
@@ -102,7 +102,7 @@ export async function* runProductionAudit(
     };
     yield { type: "progress", value: interpolate(range, 3, 4) };
 
-    // ---- Étape 4: en-têtes de sécurité ----------------------------------------
+    // ---- Step 4: security headers ----------------------------------------
     yield { type: "test_step", step: buildStep(4, "RUNNING") };
     const missingHeaders: string[] = [];
     const headerHints: string[] = [];
@@ -126,7 +126,7 @@ export async function* runProductionAudit(
       },
     };
 
-    // Constats actionnables réels (les mêmes règles de gravité que le scan).
+    // Real actionable findings (same severity rules as the scan).
     if (response !== null && missingHeaders.length > 0) {
       yield {
         type: "finding",
@@ -186,24 +186,24 @@ async function inspectTls(
       try {
         socket?.destroy();
       } catch {
-        // socket déjà détruit
+        // socket already destroyed
       }
       resolve(result);
     };
 
     const onAbort = (): void => {
       socket?.destroy();
-      // pas de rejet: l'annulation remonte via le test suivant
+      // no rejection: the cancellation surfaces via the next check
     };
     signal.addEventListener("abort", onAbort, { once: true });
 
     try {
       socket = tlsConnect({
-        // IP déjà validée : la poignée de main ne peut pas être redirigée par DNS.
+        // IP already validated: the handshake cannot be redirected by DNS.
         host: address,
         port: 443,
         servername: hostname.replace(/^\[|\]$/g, ""),
-        rejectUnauthorized: false, // on veut inspecter, pas rejeter ici
+        rejectUnauthorized: false, // we want to inspect, not reject here
       });
       socket.setTimeout(8_000, () => {
         finish({ daysLeft: null, reason: "TLS handshake timeout." });

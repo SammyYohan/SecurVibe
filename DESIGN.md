@@ -1,4 +1,4 @@
-# Design GuardVibe
+# Design SecurVibe
 
 Direction : **sobre, chaleureux, premium — pour les vibe coders.**
 Fond clair ivoire sauge, un seul accent vert mousse, aucun bleu, aucun dégradé.

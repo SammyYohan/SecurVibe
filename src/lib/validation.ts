@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 /**
- * URL d'un dépôt GitHub : https://github.com/<owner>/<repo>
- * Redéfinie ici pour rester testable sans accès réseau.
- * Les schémas de ce fichier sont partagés entre le client et la route API.
+ * URL of a GitHub repository: https://github.com/<owner>/<repo>
+ * Redefined here so it stays testable without network access.
+ * The schemas in this file are shared between the client and the API route.
  */
 export const GITHUB_REPO_REGEX =
   /^https:\/\/github\.com\/([A-Za-z0-9][A-Za-z0-9-]{0,38})\/([A-Za-z0-9._-]{1,100})\/?$/;
@@ -45,25 +45,25 @@ function parseIpv4(address: string): [number, number, number, number] | null {
 }
 
 /**
- * IPv4 non routables / internes : loopback, privées, CGNAT, link-local,
- * documentation, benchmarking, multicast et adresses réservées.
+ * Non-routable / internal IPv4: loopback, private, CGNAT, link-local,
+ * documentation, benchmarking, multicast and reserved addresses.
  */
 function isPrivateIpv4(octets: readonly number[]): boolean {
   const [a = 0, b = 0] = octets;
   if (a === 0 || a === 10 || a === 127) return true;
   if (a === 100 && b >= 64 && b <= 127) return true; // 100.64.0.0/10 (CGNAT)
-  if (a === 169 && b === 254) return true; // 169.254.0.0/16 (métadonnées cloud)
+  if (a === 169 && b === 254) return true; // 169.254.0.0/16 (cloud metadata)
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;
   if (a === 192 && (b === 0 || b === 2)) return true; // 192.0.0.0/24, 192.0.2.0/24
   if (a === 198 && (b === 18 || b === 19)) return true;
   if (a === 198 && b === 51) return true; // 198.51.100.0/24
   if (a === 203 && b === 0) return true; // 203.0.113.0/24
-  if (a >= 224) return true; // multicast (224/4), réservé (240/4), broadcast
+  if (a >= 224) return true; // multicast (224/4), reserved (240/4), broadcast
   return false;
 }
 
-/** Décompose une IPv6 (avec "::", IPv4 encapsulée et zone) en 16 octets. */
+/** Parses an IPv6 address (with "::", embedded IPv4 and zone) into 16 bytes. */
 function parseIpv6(address: string): number[] | null {
   let value = address.trim().toLowerCase();
   const zone = value.indexOf("%");
@@ -101,25 +101,25 @@ function parseIpv6(address: string): number[] | null {
   return bytes;
 }
 
-/** IPv6 non routables : ULA, link-local, mappées/encapsulées privées, multicast. */
+/** Non-routable IPv6: ULA, link-local, private IPv4-mapped/embedded, multicast. */
 function isPrivateIpv6(bytes: readonly number[]): boolean {
   const at = (index: number): number => bytes[index] ?? 0;
   const isZeroSlice = (from: number, to: number): boolean =>
     bytes.slice(from, to).every((byte) => byte === 0);
 
-  if (isZeroSlice(0, 16)) return true; // :: (non spécifiée)
+  if (isZeroSlice(0, 16)) return true; // :: (unspecified)
   if (isZeroSlice(0, 15) && at(15) === 1) return true; // ::1 (loopback)
   if ((at(0) & 0xfe) === 0xfc) return true; // fc00::/7 (ULA)
   if (at(0) === 0xfe && (at(1) & 0xc0) === 0x80) return true; // fe80::/10 (link-local)
   if (at(0) === 0xff) return true; // ff00::/8 (multicast)
 
-  // ::ffff:a.b.c.d (IPv4 mappée) et ::a.b.c.d (compatible, obsolète)
+  // ::ffff:a.b.c.d (IPv4-mapped) and ::a.b.c.d (IPv4-compatible, deprecated)
   if (isZeroSlice(0, 10) && at(10) === 0xff && at(11) === 0xff) {
     return isPrivateIpv4([at(12), at(13), at(14), at(15)]);
   }
   if (isZeroSlice(0, 12)) return isPrivateIpv4([at(12), at(13), at(14), at(15)]);
 
-  // 64:ff9b::/96 (NAT64) et 2002::/16 (6to4) encapsulent une IPv4
+  // 64:ff9b::/96 (NAT64) and 2002::/16 (6to4) encapsulate an IPv4
   if (at(0) === 0x00 && at(1) === 0x64 && at(2) === 0xff && at(3) === 0x9b) {
     return isPrivateIpv4([at(12), at(13), at(14), at(15)]);
   }
@@ -132,19 +132,19 @@ function isPrivateIpv6(bytes: readonly number[]): boolean {
   return false;
 }
 
-/** Vrai si l'adresse IP (v4 ou v6) n'est pas une adresse publique routable. */
+/** True if the IP address (v4 or v6) is not a publicly routable address. */
 export function isPrivateAddress(address: string): boolean {
   const trimmed = address.trim();
   const ipv4 = parseIpv4(trimmed);
   if (ipv4 !== null) return isPrivateIpv4(ipv4);
   const ipv6 = parseIpv6(trimmed);
   if (ipv6 !== null) return isPrivateIpv6(ipv6);
-  return true; // forme inconnue : refus par défaut
+  return true; // unknown form: refuse by default
 }
 
 /**
- * Refus des cibles internes à partir du nom d'hôte (avant résolution DNS).
- * Gère aussi les littéraux IPv6 que `URL.hostname` renvoie entre crochets.
+ * Refuse internal targets based on the hostname (before DNS resolution).
+ * Also handles the IPv6 literals that `URL.hostname` returns in brackets.
  */
 export function isPrivateOrLocalHost(hostname: string): boolean {
   const lower = hostname.toLowerCase();
@@ -160,7 +160,7 @@ export function isPrivateOrLocalHost(hostname: string): boolean {
     return true;
   }
 
-  // Littéral IP (v4, v6) : classification complète.
+  // IP literal (v4, v6): full classification.
   if (parseIpv4(bare) !== null || parseIpv6(bare) !== null) {
     return isPrivateAddress(bare);
   }
@@ -193,9 +193,9 @@ export type ProductionUrlSchema = z.infer<typeof productionUrlSchema>;
 export const scanRequestSchema = z
   .object({
     repoUrl: repoUrlSchema,
-    /** Absent ou vide : audit du dépôt seul, sans sonde du site. */
+    /** Absent or empty: repository audit only, without the site probe. */
     productionUrl: z.string().optional(),
-    /** Token GitHub optionnel fourni par l'utilisateur (sans stockage). */
+    /** Optional GitHub token provided by the user (not stored). */
     githubToken: z.string().optional(),
   })
   .superRefine((value, ctx) => {

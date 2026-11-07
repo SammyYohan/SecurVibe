@@ -1,27 +1,27 @@
 @import "tailwindcss";
 
 /*
- * Design tokens GuardVibe — palette claire, chaude et homogène.
- * Une seule couleur d'accent (vert mousse), aucun dégradé, aucun bleu.
- * Contrastes vérifiés ≥ 4.5:1 (texte) pour chaque paire fond/texte utilisée.
+ * Design tokens SecurVibe — light, warm, cohesive palette.
+ * A single accent color (moss green), no gradients, no blue.
+ * Contrast verified ≥ 4.5:1 (text) for every used background/text pair.
  */
 @theme {
-  --color-paper: #f4f3ed; /* fond de page */
-  --color-paper-2: #ecebe3; /* survol discret */
+  --color-paper: #f4f3ed; /* page background */
+  --color-paper-2: #ecebe3; /* subtle hover */
   --color-card: #fbfaf6; /* surfaces */
-  --color-line: #e1dfd4; /* bordures fines */
-  --color-line-strong: #cfccbf; /* bordures de champs / boutons secondaires */
-  --color-ink: #1e2420; /* texte principal */
-  --color-mute: #59615b; /* texte secondaire */
-  --color-faint: #6b736d; /* placeholders, métadonnées */
-  --color-tint: #e6ece3; /* aplat sauge (badges, bandeau CTA) */
-  --color-accent: #2f5d4a; /* vert mousse */
+  --color-line: #e1dfd4; /* thin borders */
+  --color-line-strong: #cfccbf; /* field borders / secondary buttons */
+  --color-ink: #1e2420; /* primary text */
+  --color-mute: #59615b; /* secondary text */
+  --color-faint: #6b736d; /* placeholders, metadata */
+  --color-tint: #e6ece3; /* sage fill (badges, CTA banner) */
+  --color-accent: #2f5d4a; /* moss green */
   --color-accent-hover: #264d3d;
-  --color-crit: #a83b28; /* brique */
+  --color-crit: #a83b28; /* brick */
   --color-crit-bg: #f6e5df;
-  --color-warn: #8a5600; /* ocre */
+  --color-warn: #8a5600; /* ochre */
   --color-warn-bg: #f5ebd3;
-  --color-night: #22281f; /* blocs de code */
+  --color-night: #22281f; /* code blocks */
   --color-night-fg: #e9ede4;
   --color-night-mute: #a9b5a3;
 

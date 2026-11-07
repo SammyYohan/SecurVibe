@@ -28,7 +28,7 @@ import { apiErrorSchema, isScanEvent } from "@/types";
 
 export type DashboardProps = {
   locale: Locale;
-  /** Textes pré-mergés (locale → repli EN) calculés côté serveur. */
+  /** Pre-merged texts (locale → EN fallback) computed on the server. */
   dictionary: Record<string, string>;
 };
 
@@ -66,20 +66,20 @@ const RUNNING_STATE: DashboardState = {
 const UNLOCK_STEP_ID = 4;
 
 /* ------------------------------------------------------------------ */
-/* Historique local des scores (strictement dans le navigateur).       */
-/* Pas d'inscription, pas de serveur : la tendance est une comparaison */
-/* entre deux passages sur la même cible (repo + URL de production).   */
+/* Local score history (strictly in the browser).                      */
+/* No signup, no server: the trend compares two runs on the same       */
+/* target (repo + production URL).                                     */
 /* ------------------------------------------------------------------ */
 
-const SCORE_HISTORY_KEY = "guardvibe.scoreHistory.v1";
+const SCORE_HISTORY_KEY = "securvibe.scoreHistory.v1";
 const MAX_HISTORY_ENTRIES = 50;
 
 type ScoreEntry = {
-  /** Score final 0–100 de l'audit. */
+  /** Final 0–100 audit score. */
   score: number;
-  /** Horodatage (millisecondes) du passage. */
+  /** Timestamp (milliseconds) of the run. */
   at: number;
-  /** Cible auditée — jamais le jeton GitHub. */
+  /** Audited target — never the GitHub token. */
   target: string;
 };
 
@@ -120,10 +120,10 @@ function reducer(state: DashboardState, action: ScanAction): DashboardState {
         case "progress":
           return { ...state, progress: event.value };
         case "finding":
-          // Déduplication : même identifiant, on remplace.
+          // Deduplication: same id, replace.
           return { ...state, findings: upsertById(state.findings, event.finding) };
         case "test_step":
-          // UPSERT par numéro d'étape : la même ligne évolue de PENDING au statut final.
+          // UPSERT by step number: the same row moves from PENDING to its final status.
           return {
             ...state,
             phase: "site",
@@ -170,33 +170,33 @@ function DashboardInner() {
   const abortRef = useRef<AbortController | null>(null);
   const [previousScore, setPreviousScore] = useState<number | null>(null);
 
-  /** Dernier audit lancé : permet « Ré-auditer après corrections ». */
+  /** Last started audit: enables "Re-audit after fixes". */
   const [lastInput, setLastInput] = useState<ScanRequest | null>(null);
-  /** Cible de l'audit en cours (repoUrl → productionUrl), sans le jeton. */
+  /** Target of the current audit (repoUrl → productionUrl), without the token. */
   const [currentTarget, setCurrentTarget] = useState("");
-  /** Miroir de l'historique (lecture unique au montage, écriture à chaque fin). */
+  /** Mirror of the history (read once on mount, written on each completion). */
   const historyRef = useRef<ScoreEntry[]>([]);
 
-  // Annulation au démontage : coupe la connexion en cours.
+  // Cancel on unmount: cuts the in-flight connection.
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
     };
   }, []);
 
-  // Chargement de l'historique local, une seule fois, navigateur uniquement.
+  // Load the local history once, browser only.
   useEffect(() => {
     historyRef.current = loadScoreHistory();
   }, []);
 
-  // Un score final entre dans l'historique ; la tendance compare la même cible.
+  // A final score enters the history; the trend compares the same target.
   useEffect(() => {
     if (state.status !== "done" || state.finalScore === null) return;
     const score = state.finalScore;
     const now = Date.now();
     const history = historyRef.current;
     const last = history[history.length - 1];
-    // Anti-doublon : double-invoke des effets (StrictMode) en développement.
+    // Duplicate guard: double-invoked effects (StrictMode) in development.
     if (last !== undefined && last.score === score && now - last.at < 2000) return;
 
     const previous =
@@ -214,12 +214,12 @@ function DashboardInner() {
         JSON.stringify(historyRef.current),
       );
     } catch {
-      // Stockage indisponible (navigation privée) : tendance absente, audit intact.
+      // Storage unavailable (private browsing): no trend, audit unaffected.
     }
   }, [state.status, state.finalScore, currentTarget]);
 
   const runScan = useCallback(async (input: ScanRequest): Promise<void> => {
-    // Nouveau scan : annule l'éventuel scan en cours.
+    // New scan: cancel any in-flight scan.
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -235,9 +235,9 @@ function DashboardInner() {
       try {
         parsedJson = JSON.parse(trimmed);
       } catch {
-        return; // ligne non-JSON : ignorée sans planter
+        return; // non-JSON line: ignored without crashing
       }
-      if (!isScanEvent(parsedJson)) return; // ligne invalide : ignorée
+      if (!isScanEvent(parsedJson)) return; // invalid line: ignored
 
       if (parsedJson.type === "done" || parsedJson.type === "error") {
         sawTerminator = true;
@@ -280,7 +280,7 @@ function DashboardInner() {
       const decoder = new TextDecoder();
       let buffer = "";
 
-      // Boucle de lecture : un JSON par ligne, la dernière ligne incomplète reste dans le buffer.
+      // Read loop: one JSON per line, the last incomplete line stays in the buffer.
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -293,7 +293,7 @@ function DashboardInner() {
         }
       }
 
-      // Fin du flux : purge du buffer (dernière ligne sans \n final).
+      // Stream end: flush the buffer (last line without a trailing newline).
       buffer += decoder.decode();
       if (buffer.trim() !== "") {
         handleLine(buffer);
@@ -304,14 +304,14 @@ function DashboardInner() {
       }
     } catch (error) {
       if (isAbortError(error)) {
-        // Annulation : jamais affichée comme une erreur.
+        // Cancellation: never shown as an error.
         if (abortRef.current === controller) {
           dispatch({ type: "CANCELLED" });
         }
         return;
       }
       console.error(
-        "[guardvibe] Network error during audit.",
+        "[securvibe] Network error during audit.",
         error instanceof Error ? error.name : typeof error,
       );
       dispatch({ type: "FAILED", message: t("dashboard.streamInterrupted") });
@@ -331,7 +331,7 @@ function DashboardInner() {
     [runScan],
   );
 
-  /** Re-lance le dernier audit avec exactement les mêmes paramètres. */
+  /** Re-runs the last audit with exactly the same parameters. */
   const handleRescan = useCallback((): void => {
     if (lastInput === null) return;
     void runScan(lastInput);
@@ -358,7 +358,7 @@ function DashboardInner() {
     [state.steps],
   );
 
-  // Score affiché : final du serveur dès l'événement "done", sinon provisoire.
+  // Displayed score: server-final as soon as the "done" event arrives, otherwise provisional.
   const partialScore = useMemo(() => {
     if (state.finalScore !== null) return null;
     if (state.findings.length === 0 && state.steps.length === 0) return null;

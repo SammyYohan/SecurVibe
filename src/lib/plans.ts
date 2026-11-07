@@ -1,25 +1,25 @@
 /**
- * Limites du service gratuit — source unique, partagée par le serveur
- * (application réelle) et par la page « Soutenir » (transparence).
- * GuardVibe est 100 % gratuit : ces quotas ne servent pas à gagner de
- * l'argent, ils bornent le coût de chaque audit pour que le service reste
- * stable et disponible à long terme.
+ * Free-service limits — single source of truth, shared by the server
+ * (where the rules are enforced) and the support page (transparency).
+ * SecurVibe is 100% free: these quotas exist to make money from no one,
+ * they bound the cost of every audit so the service stays stable and
+ * available in the long term.
  */
 
-/** Audits maximum par IP dans une fenêtre glissante de 60 s. */
+/** Maximum audits per IP in a sliding 60-second window. */
 export const AUDITS_PER_MINUTE = 6;
 
-/** Audits maximum par IP et par jour (fenêtre calendaire UTC, reset à minuit UTC). */
+/** Maximum audits per IP per day (UTC calendar day, resets at midnight UTC). */
 export const AUDITS_PER_DAY = 30;
 
 /**
- * Plafond global journalier, toutes IP confondues. Protège le quota GitHub
- * du serveur (≈ 2 appels API/audit) et la capacité d'hébergement gratuite.
+ * Global daily ceiling, all IPs combined. Protects the server's GitHub
+ * quota (≈ 2 API calls per audit) and the free hosting capacity.
  */
 export const GLOBAL_DAILY_AUDITS = 1000;
 
-/** Audits exécutés simultanément par instance (garde-fou mémoire/CPU). */
+/** Audits running simultaneously per instance (memory/CPU guardrail). */
 export const MAX_CONCURRENT_AUDITS = 3;
 
-/** Nombre maximum de fichiers analysés par audit. */
+/** Maximum number of files analyzed per audit. */
 export const MAX_AUDIT_FILES = 200;

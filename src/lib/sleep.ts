@@ -31,9 +31,9 @@ export function isAbortError(error: unknown): boolean {
 
 function createAbortError(): Error {
   if (typeof DOMException === "function") {
-    return new DOMException("L'opération a été annulée.", "AbortError");
+    return new DOMException("The operation was aborted.", "AbortError");
   }
-  const error = new Error("L'opération a été annulée.");
+  const error = new Error("The operation was aborted.");
   error.name = "AbortError";
   return error;
 }

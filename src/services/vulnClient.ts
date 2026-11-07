@@ -4,8 +4,8 @@ import { z } from "zod";
 import { isAbortError } from "@/lib/sleep";
 
 /**
- * Client OSV.dev (base de vulnérabilités open source, gratuite, sans clé).
- * Une indisponibilité n'est jamais présentée comme « aucune vulnérabilité ».
+ * OSV.dev client (open source vulnerability database, free, no key).
+ * An outage is never reported as "no vulnerabilities".
  */
 
 export type DependencyRef = { name: string; version: string };
@@ -14,7 +14,7 @@ export type AdvisorySeverity = "CRITICAL" | "HIGH" | "MODERATE" | "LOW" | "UNKNO
 
 export type DependencyVulnerability = {
   dependency: DependencyRef;
-  /** Identifiants d'avis (GHSA-, CVE-…). */
+  /** Advisory identifiers (GHSA-, CVE-…). */
   advisoryIds: string[];
   highestSeverity: AdvisorySeverity;
 };
@@ -61,7 +61,7 @@ const SEVERITY_RANK: Record<AdvisorySeverity, number> = {
   CRITICAL: 4,
 };
 
-/** Vérifie les dépendances npm contre OSV.dev. */
+/** Checks npm dependencies against OSV.dev. */
 export async function queryVulnerabilities(
   dependencies: readonly DependencyRef[],
   signal: AbortSignal,

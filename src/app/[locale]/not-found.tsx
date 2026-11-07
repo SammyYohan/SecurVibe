@@ -4,8 +4,8 @@ import { Compass } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 
 /**
- * 404. Le middleware redirige tous les chemins sans locale vers
- * /{locale}/… ; ce 404 sert les chemins locaux inconnus (ex. /fr/inconnu).
+ * 404. The proxy redirects every path without a locale to
+ * /{locale}/…; this 404 serves unknown localized paths (e.g. /fr/unknown).
  */
 export default function LocaleNotFound() {
   return (
@@ -15,7 +15,7 @@ export default function LocaleNotFound() {
       </span>
       <h1 className="text-2xl font-extrabold tracking-tight">404 — Page not found</h1>
       <Link href="/" className={buttonVariants()}>
-        GuardVibe
+        SecurVibe
       </Link>
     </main>
   );

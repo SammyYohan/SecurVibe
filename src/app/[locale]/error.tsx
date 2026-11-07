@@ -8,8 +8,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { isLocale } from "@/lib/i18n/config";
 
 /**
- * Frontière d'erreur localisée. Le dictionnaire de la locale (déduit de
- * l'URL) est chargé dynamiquement pour ne pas alourdir le bundle principal.
+ * Localized error boundary. The locale's dictionary (inferred from the
+ * URL) is loaded dynamically to keep the main bundle light.
  */
 export default function LocaleError({
   error,
@@ -38,7 +38,7 @@ export default function LocaleError({
         title: texts["dashboard.errorTitle"] ?? "An error occurred",
         body:
           texts["dashboard.errorBody"] ??
-          "GuardVibe could not display this page. You can retry: your data stays local, nothing was sent.",
+          "SecurVibe could not display this page. You can retry: your data stays local, nothing was sent.",
         retry: texts["dashboard.errorRetry"] ?? "Retry",
       };
       setState(merged);
@@ -48,13 +48,13 @@ export default function LocaleError({
     };
   }, []);
 
-  console.error("[guardvibe] Render error.", error.name, error.digest ?? "");
+  console.error("[securvibe] Render error.", error.name, error.digest ?? "");
 
   const merged =
     state ?? {
       homeHref: "/en",
       title: "An error occurred",
-      body: "GuardVibe could not display this page. You can retry: your data stays local, nothing was sent.",
+      body: "SecurVibe could not display this page. You can retry: your data stays local, nothing was sent.",
       retry: "Retry",
     };
 
@@ -73,7 +73,7 @@ export default function LocaleError({
           {merged.retry}
         </button>
         <Link href={merged.homeHref} className={buttonVariants({ variant: "outline" })}>
-          GuardVibe
+          SecurVibe
         </Link>
       </div>
     </main>

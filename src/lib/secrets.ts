@@ -1,9 +1,9 @@
 import type { Severity } from "@/types";
 
 /**
- * Règles de secrets. Les motifs sont des formes publiques de clés
- * (préfixe + alphabet), jamais une clé réelle.
- * Le texte correspondant n'est pas recopié dans le constat.
+ * Secret rules. The patterns are public key shapes (prefix + alphabet),
+ * never a real key.
+ * The matched text is not copied into the finding.
  */
 
 export type SecretRule = {
@@ -15,7 +15,7 @@ export type SecretRule = {
 export type SecretMatch = {
   rule: SecretRule;
   line: number;
-  /** La ligne expose la valeur côté navigateur (NEXT_PUBLIC_, VITE_…). */
+  /** The line exposes the value to the browser (NEXT_PUBLIC_, VITE_…). */
   clientExposed: boolean;
 };
 

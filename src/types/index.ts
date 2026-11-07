@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
-// Schémas de base
+// Base schemas
 // ---------------------------------------------------------------------------
 
 export const severitySchema = z.enum(["CRITICAL", "WARNING", "OK"]);
@@ -44,7 +44,7 @@ export const scanErrorCodeSchema = z.enum([
 export type ScanErrorCode = z.infer<typeof scanErrorCodeSchema>;
 
 // ---------------------------------------------------------------------------
-// Flux d'événements (NDJSON) — contrat stable entre la route API et le client
+// Event stream (NDJSON) — stable contract between the API route and the client
 // ---------------------------------------------------------------------------
 
 export const scanEventSchema = z.discriminatedUnion("type", [
@@ -79,7 +79,7 @@ export type ScanEvent = z.infer<typeof scanEventSchema>;
 
 export type ScanErrorEvent = Extract<ScanEvent, { type: "error" }>;
 
-/** Garde de type pour valider une ligne du flux avant toute utilisation. */
+/** Type guard to validate a stream line before any use. */
 export function isScanEvent(value: unknown): value is ScanEvent {
   return scanEventSchema.safeParse(value).success;
 }
@@ -93,7 +93,7 @@ export const apiErrorSchema = z.object({
 export type ApiError = z.infer<typeof apiErrorSchema>;
 
 // ---------------------------------------------------------------------------
-// État du tableau de bord (client) — source unique partagée par les composants
+// Dashboard state (client) — single source shared by the components
 // ---------------------------------------------------------------------------
 
 export const dashboardStatusSchema = z.enum([
@@ -108,6 +108,6 @@ export type DashboardStatus = z.infer<typeof dashboardStatusSchema>;
 export const scanPhaseSchema = z.enum(["scan", "site"]);
 export type ScanPhase = z.infer<typeof scanPhaseSchema>;
 
-/** Plage de progression allouée à un service dans le flux global (0-100). */
+/** Progress range allocated to a service in the overall stream (0-100). */
 export type ProgressRange = { from: number; to: number };
 

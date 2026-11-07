@@ -21,9 +21,9 @@ import type {
 export const runtime = "nodejs";
 
 /**
- * Vercel : un audit enchaîne jusqu'à 200 lectures GitHub puis 4 contrôles
- * HTTP/TLS. Sur le plan Hobby, 60 s est le maximum par fonction : sans cette
- * valeur, la durée par défaut peut couper le flux avant l'événement "done".
+ * Vercel: one audit chains up to 200 GitHub reads then 4 HTTP/TLS checks.
+ * On the Hobby plan, 60 s is the per-function maximum: without this value,
+ * the default timeout could cut the stream before the "done" event.
  */
 export const maxDuration = 60;
 
@@ -31,7 +31,7 @@ const UNLOCK_STEP_ID = 4;
 
 const GENERIC_ERROR_MESSAGE = "An unexpected error occurred during the audit.";
 
-/** Plages de progression allouées à chaque service dans le flux global. */
+/** Progress ranges allocated to each service in the global flow. */
 const SCAN_RANGE: ProgressRange = { from: 0, to: 60 };
 const SITE_RANGE: ProgressRange = { from: 60, to: 100 };
 
@@ -53,8 +53,8 @@ export async function POST(request: Request): Promise<Response> {
       return respond400("INVALID_REQUEST", "Invalid request: provide a GitHub repository URL.");
     }
 
-    // Quota d'usage gratuit : fenêtre minute + plafond journalier par IP
-    // + plafond global journalier (store partagé Upstash, repli mémoire).
+    // Free-service quota: minute window + per-IP daily ceiling
+    // + global daily ceiling (Upstash shared store, memory fallback).
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
     const quota = await checkDailyQuota(ip);
     if (quota.ok === false) {
@@ -63,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
           ? "Too many audits in a short time. Wait a minute and retry."
           : quota.reason === "daily"
             ? `Daily audit limit reached for this network (${AUDITS_PER_DAY} per day). It resets at midnight UTC.`
-            : "The free daily capacity of GuardVibe is currently used up. Come back in a few hours.";
+            : "The free daily capacity of SecurVibe is currently used up. Come back in a few hours.";
       return Response.json(
         { error: { code: "RATE_LIMITED", message } },
         {
@@ -77,8 +77,8 @@ export async function POST(request: Request): Promise<Response> {
     }
     if (Math.random() < 0.05) pruneRateLimitBuckets();
 
-    // Garde-fou de concurrence par instance : le service ne peut pas être
-    // saturé par un pic (chaque audit tient le flux ~30 à 60 s).
+    // Per-instance concurrency guardrail: the service cannot be saturated
+    // by a burst (each audit holds its stream open for ~30–60 s).
     if (acquireAuditSlot() === false) {
       return Response.json(
         {
@@ -97,7 +97,7 @@ export async function POST(request: Request): Promise<Response> {
       releaseAuditSlot();
     };
 
-    // Un seul contrôleur d'annulation: requête client + cancel() du flux.
+    // A single cancellation controller: client request + stream cancel().
     startedController = new AbortController();
     const activeController = startedController;
     const onClientAbort = (): void => activeController.abort();
@@ -117,7 +117,7 @@ export async function POST(request: Request): Promise<Response> {
           try {
             streamController.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
           } catch {
-            isClosed = true; // contrôleur déjà fermé
+            isClosed = true; // controller already closed
           }
         };
 
@@ -127,7 +127,7 @@ export async function POST(request: Request): Promise<Response> {
           try {
             streamController.close();
           } catch {
-            // Déjà fermé par l'environnement.
+            // Already closed by the environment.
           }
         };
 
@@ -157,13 +157,13 @@ export async function POST(request: Request): Promise<Response> {
           }
 
           if (scanError !== null) {
-            // scanError est déjà un ScanEvent error valide (code + message).
+            // scanError is already a valid error ScanEvent (code + message).
             send(scanError);
-            return; // pas d'audit site si le scan échoue
+            return; // no site audit when the scan fails
           }
 
-          // Audit de production (réel) — inclus pour tout le monde, exécuté
-          // uniquement si l'URL est fournie et si la connexion tient.
+          // Production audit (real) — included for everyone, run only when
+          // the URL is provided and the connection is still alive.
           let journeyFailed = false;
           if (tokens.productionUrl !== undefined && !activeController.signal.aborted) {
             for await (const event of runProductionAudit(
@@ -197,12 +197,12 @@ export async function POST(request: Request): Promise<Response> {
         } catch (error) {
           if (!isAbortError(error)) {
             console.error(
-              "[guardvibe] Unexpected error during audit.",
+              "[securvibe] Unexpected error during audit.",
               error instanceof Error ? error.name : typeof error,
             );
             send({ type: "error", code: "INTERNAL_ERROR", message: GENERIC_ERROR_MESSAGE });
           }
-          // Annulation: fermeture silencieuse, sans événement d'erreur.
+          // Cancellation: silent close, no error event.
         } finally {
           request.signal.removeEventListener("abort", onClientAbort);
           releaseSlot();
@@ -220,9 +220,9 @@ export async function POST(request: Request): Promise<Response> {
     if (isAbortError(error)) {
       return new Response(null, { status: 499, headers: { "Cache-Control": "no-store" } });
     }
-    // Invalides/inattendus au niveau de l'enveloppe: jamais de stack au client.
+    // Invalid/unexpected at the envelope level: never leak a stack to the client.
     console.error(
-      "[guardvibe] Unexpected error while starting the audit.",
+      "[securvibe] Unexpected error while starting the audit.",
       error instanceof Error ? error.name : typeof error,
     );
     return respond400("INTERNAL_ERROR", "Could not start the audit. Please retry.");
@@ -236,7 +236,7 @@ function parseScanRequest(body: unknown): {
 } | null {
   const parsed = scanRequestSchema.safeParse(body);
   if (!parsed.success) return null;
-  // Le token ne transite QUE dans cette requête; jamais persisté.
+  // The token only transits through this request; it is never persisted.
   return {
     repoUrl: parsed.data.repoUrl,
     productionUrl: parsed.data.productionUrl,

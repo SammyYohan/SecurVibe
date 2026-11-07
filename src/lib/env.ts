@@ -26,13 +26,13 @@ const optionalUrlSchema = z
     } catch {
       return false;
     }
-  }, "Doit être une URL https:// valide.");
+  }, "Must be a valid https:// URL.");
 
 const serverEnvSchema = z.object({
-  // Token GitHub optionnel : augmente le quota de scanning serveur (60 -> 5000/h).
+  // Optional GitHub token: raises the server-side scanning quota (60 -> 5000/h).
   GITHUB_TOKEN: optionalSecretSchema,
-  // Store partagé des quotas (Upstash Redis, API REST). Absent : les quotas
-  // tombent en repli mémoire (par instance) — le service reste fonctionnel.
+  // Shared quota store (Upstash Redis, REST API). Missing: the quotas fall
+  // back to in-memory (per instance) — the service keeps working.
   UPSTASH_REDIS_REST_URL: optionalUrlSchema,
   UPSTASH_REDIS_REST_TOKEN: optionalSecretSchema,
 });
@@ -42,15 +42,15 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 let cachedEnv: ServerEnv | null = null;
 
 /**
- * Validation stricte des variables serveur (cache en mémoire du process).
- * Lève une erreur si une variable fournie est invalide — convertie
- * en événement INTERNAL_ERROR par la route, jamais de détail au client.
+ * Strict validation of the server environment variables (cached in the
+ * process memory). Throws if a provided variable is invalid — surfaced
+ * as an INTERNAL_ERROR by the routes, never leaking details to the client.
  */
 export function getServerEnv(): ServerEnv {
   if (cachedEnv !== null) return cachedEnv;
   const parsed = serverEnvSchema.safeParse(process.env);
   if (!parsed.success) {
-    throw new Error("Variables d'environnement serveur invalides.");
+    throw new Error("Invalid server environment variables.");
   }
   cachedEnv = parsed.data;
   return cachedEnv;

@@ -22,12 +22,12 @@ export type ScanStatusProps = {
   status: DashboardStatus;
   phase: ScanPhase;
   progress: number;
-  /** Score affiché : final du serveur, provisoire, ou null ("--"). */
+  /** Displayed score: server-final, provisional, or null ("--"). */
   score: number | null;
   finalScore: boolean;
   partial: boolean;
   errorMessage: string | null;
-  /** Score de l'audit précédent sur la même cible (historique local), sinon null. */
+  /** Score of the previous audit on the same target (local history), or null. */
   previousScore: number | null;
 };
 
@@ -37,7 +37,7 @@ const TIER_TEXT_COLOR: Record<ScoreTier, string> = {
   bad: "text-crit",
 };
 
-/** Anneau de score : rayon et circonférence du cercle SVG (viewBox 168). */
+/** Score ring: radius and circumference of the SVG circle (viewBox 168). */
 const RING_RADIUS = 72;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
@@ -55,7 +55,7 @@ export function ScanStatus({
   const tier: ScoreTier | null = score === null ? null : getScoreTier(score);
   const animatedScore = useAnimatedNumber(score ?? 0);
 
-  // Tendance uniquement sur les scores finals de la même cible.
+  // Trend only across final scores of the same target.
   const delta =
     finalScore && score !== null && previousScore !== null
       ? score - previousScore
@@ -121,8 +121,8 @@ export function ScanStatus({
     }
   }, [status]);
 
-  // Région sr-only : annonce le début, la fin et les erreurs,
-  // sans répéter chaque événement du flux.
+  // Screen-reader-only live region: announces start, end and errors,
+  // without repeating every stream event.
   const liveAnnouncement = useMemo(() => {
     if (status === "running" && phase === "scan") {
       return t("dashboard.liveRegionStart");
