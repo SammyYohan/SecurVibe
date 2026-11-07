@@ -132,7 +132,12 @@ export async function POST(request: Request): Promise<Response> {
         };
 
         try {
-          getServerEnv();
+          try {
+            getServerEnv();
+          } catch {
+            // Env misconfigured: fail-open, the audit proceeds with optional
+            // integrations (GitHub token, Upstash) gracefully degraded.
+          }
 
           const findings: Finding[] = [];
           let scanError: ScanErrorEvent | null = null;
@@ -198,7 +203,9 @@ export async function POST(request: Request): Promise<Response> {
           if (!isAbortError(error)) {
             console.error(
               "[securvibe] Unexpected error during audit.",
-              error instanceof Error ? error.name : typeof error,
+              error instanceof Error
+                ? `${error.name}: ${error.message}`
+                : typeof error,
             );
             send({ type: "error", code: "INTERNAL_ERROR", message: GENERIC_ERROR_MESSAGE });
           }
