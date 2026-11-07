@@ -7,6 +7,10 @@
 
 **Real security audits for AI-built SaaS** — GitHub scanner + production audit, in ≈ 60 seconds, 100% free, no account.
 
+▶️ **Live demo**: [securvibe-theta.vercel.app](https://securvibe-theta.vercel.app/) — run a free audit and judge for yourself. No account needed.
+
+[![SecurVibe landing page — repository & production audit preview (sample score 92/100)](./docs/screenshot-landing.png)](https://securvibe-theta.vercel.app/)
+
 🌍 **English** | [Français](./README.fr.md) | [Español](./README.es.md) | [Deutsch](./README.de.md) | [Português (BR)](./README.pt-br.md) | [日本語](./README.ja.md) | [简体中文](./README.zh-cn.md) | [العربية](./README.ar.md)
 
 > 🌐 Interface available in 8 languages: English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).

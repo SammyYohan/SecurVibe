@@ -7,6 +7,10 @@
 
 **تدقيقات أمنية حقيقية لخدمات SaaS المبنية بالذكاء الاصطناعي** — ماسح GitHub + تدقيق بيئة الإنتاج، في ≈ 60 ثانية، مجاني 100%، وبدون حساب.
 
+▶️ **عرض مباشر**: [securvibe-theta.vercel.app](https://securvibe-theta.vercel.app/) — شغّل تدقيقًا مجانيًا واحكم بنفسك. بدون حساب.
+
+[![الصفحة الرئيسية لـ SecurVibe — معاينة تدقيق المستودع وبيئة الإنتاج (مثال: درجة 92/100)](./docs/screenshot-landing.png)](https://securvibe-theta.vercel.app/)
+
 🌍 [English](./README.md) | [Français](./README.fr.md) | [Español](./README.es.md) | [Deutsch](./README.de.md) | [Português (BR)](./README.pt-br.md) | [日本語](./README.ja.md) | [简体中文](./README.zh-cn.md) | **العربية**
 
 > 🌐 الواجهة متوفرة بثماني لغات: English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).

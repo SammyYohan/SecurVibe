@@ -7,6 +7,10 @@
 
 **为 AI 构建 SaaS 提供真实的安全审计** — GitHub 扫描器 + 生产环境审计，约 60 秒完成，100% 免费，无需账号。
 
+▶️ **在线演示**：[securvibe-theta.vercel.app](https://securvibe-theta.vercel.app/) —— 免费运行一次审计，亲自验证效果。无需账号。
+
+[![SecurVibe 首页 — 仓库与生产环境审计预览（示例分数 92/100）](./docs/screenshot-landing.png)](https://securvibe-theta.vercel.app/)
+
 🌍 [English](./README.md) | [Français](./README.fr.md) | [Español](./README.es.md) | [Deutsch](./README.de.md) | [Português (BR)](./README.pt-br.md) | [日本語](./README.ja.md) | **简体中文** | [العربية](./README.ar.md)
 
 > 🌐 界面提供 8 种语言：English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL)。

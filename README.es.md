@@ -7,6 +7,10 @@
 
 **Auditorías de seguridad reales para SaaS creados con IA** — escáner de GitHub + auditoría de producción, en ≈ 60 segundos, 100 % gratuito, sin cuenta.
 
+▶️ **Demo en vivo**: [securvibe-theta.vercel.app](https://securvibe-theta.vercel.app/) — lanza una auditoría gratuita y saca tus propias conclusiones. Sin cuenta.
+
+[![Página de inicio de SecurVibe — vista previa de auditoría de repositorio y producción (ejemplo: puntuación 92/100)](./docs/screenshot-landing.png)](https://securvibe-theta.vercel.app/)
+
 🌍 [English](./README.md) | [Français](./README.fr.md) | **Español** | [Deutsch](./README.de.md) | [Português (BR)](./README.pt-br.md) | [日本語](./README.ja.md) | [简体中文](./README.zh-cn.md) | [العربية](./README.ar.md)
 
 > 🌐 Interfaz disponible en 8 idiomas: English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL).

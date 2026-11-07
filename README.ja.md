@@ -7,6 +7,10 @@
 
 **AIで構築したSaaSのための本物のセキュリティ監査** — GitHubスキャナー + 本番環境監査を約60秒で、100%無料、アカウント不要。
 
+▶️ **ライブデモ**: [securvibe-theta.vercel.app](https://securvibe-theta.vercel.app/) — 無料の監査を実行して、ぜひご自身で確かめてみてください。アカウント不要です。
+
+[![SecurVibeのトップページ — リポジトリ監査と本番環境監査のプレビュー(サンプルスコア92/100)](./docs/screenshot-landing.png)](https://securvibe-theta.vercel.app/)
+
 🌍 [English](./README.md) | [Français](./README.fr.md) | [Español](./README.es.md) | [Deutsch](./README.de.md) | [Português (BR)](./README.pt-br.md) | **日本語** | [简体中文](./README.zh-cn.md) | [العربية](./README.ar.md)
 
 > 🌐 インターフェースは8言語で利用できます: English · Français · Español · Deutsch · Português (BR) · 日本語 · 简体中文 · العربية (RTL)。
